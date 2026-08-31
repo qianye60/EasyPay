@@ -38,10 +38,10 @@ foreach($channels as $channel){
 }
 ?>
 <style>
-.gjb-page{max-width:1080px;margin:0 auto;padding:24px 28px 48px;color:#0f172a}
+.gjb-page{max-width:1240px;margin:0 auto;padding:24px 28px 48px;color:#0f172a}
 .gjb-page *{box-sizing:border-box}
 .gjb-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:22px}
-.gjb-hero h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.02em}
+.gjb-hero h1{margin:0;font-size:24px;font-weight:700}
 .gjb-hero p{margin:6px 0 0;color:#64748b;font-size:13px;line-height:1.5}
 .gjb-stats{display:flex;gap:8px;flex-shrink:0}
 .gjb-stat{min-width:88px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #e2e8f0}
@@ -52,8 +52,8 @@ foreach($channels as $channel){
 .gjb-card-hd h2{margin:0;font-size:15px;font-weight:700}
 .gjb-card-hd small{color:#94a3b8;font-size:12px}
 .gjb-monitor{display:grid;grid-template-columns:200px 1fr;gap:0}
-.gjb-aside{padding:20px;border-right:1px solid #f1f5f9;background:linear-gradient(180deg,#f8fafc 0%,#fff 100%)}
-.gjb-aside.online{background:linear-gradient(180deg,#ecfdf5 0%,#fff 55%)}
+.gjb-aside{padding:20px;border-right:1px solid #f1f5f9;background:#f8fafc}
+.gjb-aside.online{background:#ecfdf5}
 .gjb-live{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:700;color:#64748b}
 .gjb-aside.online .gjb-live{color:#15803d}
 .gjb-dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}
@@ -68,8 +68,9 @@ foreach($channels as $channel){
 .gjb-scan p{margin:10px 0 0;font-size:12px;color:#94a3b8;line-height:1.5}
 .gjb-fields{display:flex;flex-direction:column;gap:12px}
 .gjb-field label{display:block;margin:0 0 6px;font-size:12px;font-weight:600;color:#475569}
-.gjb-field .input-group{display:flex;width:100%}
-.gjb-field .form-control{height:38px;border-color:#e2e8f0;box-shadow:none;border-radius:8px 0 0 8px;background:#f8fafc;color:#334155;font-size:13px}
+.gjb-field .input-group{display:flex;width:100%;gap:0!important}
+.gjb-field .input-group .form-control{height:38px;width:auto!important;min-width:0;flex:1 1 auto;border-color:#e2e8f0;box-shadow:none;border-radius:8px 0 0 8px;background:#f8fafc;color:#334155;font-size:13px}
+.gjb-field .input-group-btn{display:flex;flex:0 0 auto}
 .gjb-field .form-control:focus{border-color:#94a3b8;background:#fff;box-shadow:none}
 .gjb-field .input-group-btn .btn{height:38px;border-color:#e2e8f0;background:#fff;color:#334155;border-radius:0 8px 8px 0;padding:0 14px}
 .gjb-field .input-group-btn .btn + .btn{margin-left:-1px}
