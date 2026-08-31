@@ -27,6 +27,7 @@ const view = (mount?.dataset.epayView ?? "admin-dashboard") as
   | "admin-roll-config"
   | "admin-shell"
   | "merchant-dashboard"
+  | "soft-download"
   | "merchant-shell"
   | "cashier"
   | "payment"

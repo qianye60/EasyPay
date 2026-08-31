@@ -27,7 +27,7 @@ $channels = [
 		'on'=>'ali_on',
 		'name'=>'支付宝',
 		'icon'=>'/assets/icon/alipay.ico',
-		'tip'=>'请使用本站「软件下载」里的修复版监控端；新版支付宝把收款金额放在通知标题。',
+		'tip'=>'上传清晰的支付宝收款码；请使用本站「软件下载」中的监控端。',
 	],
 ];
 $uploadedCount = 0;

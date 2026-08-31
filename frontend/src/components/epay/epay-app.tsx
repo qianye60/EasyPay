@@ -29,6 +29,7 @@ import {
   Sun,
   Users,
   WalletCards,
+  Zap,
 } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -47,6 +48,10 @@ import {
   type LegacyShellConfig,
 } from "@/components/epay/legacy-shell"
 import { PublicHomeView } from "@/components/epay/public-home"
+import {
+  SoftDownloadView,
+  type SoftDownloadConfig,
+} from "@/components/epay/soft-download"
 import {
   TransferConfirmView,
   type TransferConfirmConfig,
@@ -135,6 +140,7 @@ type EpayView =
   | "admin-roll-config"
   | "admin-shell"
   | "merchant-dashboard"
+  | "soft-download"
   | "merchant-shell"
   | "cashier"
   | "payment"
@@ -2146,6 +2152,21 @@ export function EpayApp({ view, config }: EpayAppProps) {
     return <QrCheckoutView config={config as QrCheckoutConfig | undefined} />
   if (view === "merchant-dashboard")
     return <MerchantDashboard config={config as JsonObject | undefined} />
+  if (view === "soft-download") {
+    const softConfig = (config ?? {}) as SoftDownloadConfig & JsonObject
+    return (
+      <WorkspaceShell
+        kind="merchant"
+        title="软件下载"
+        description="下载安卓监控端，配置后自动回调到账"
+        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        features={objectOf(shellConfig, "features")}
+        user={objectOf(shellConfig, "user")}
+      >
+        <SoftDownloadView config={softConfig} />
+      </WorkspaceShell>
+    )
+  }
   if (view === "admin-order")
     return (
       <WorkspaceShell
