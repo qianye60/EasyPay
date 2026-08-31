@@ -17,6 +17,12 @@ $channels = [
 	['type'=>'alipay', 'qr'=>'ali_qr', 'on'=>'ali_on', 'name'=>'支付宝', 'note'=>'上传清晰的支付宝收款码。官方 V免签只认通知文案含「通过扫码向你付款」或「成功收款」；文案变了就不会推送。'],
 	['type'=>'qqpay', 'qr'=>'qq_qr', 'on'=>'qq_on', 'name'=>'QQ钱包', 'note'=>'上传清晰的 QQ 收款码。官方 V免签 APP 不听 QQ 通知，需挂机宝等能推 QQ 到账的监控端。'],
 ];
+$uploadedCount = 0;
+$activeCount = 0;
+foreach($channels as $channel){
+	if(!empty($row[$channel['qr']])) $uploadedCount++;
+	if(intval($row[$channel['on']] ?? 1) === 1) $activeCount++;
+}
 ?>
 <style>
 .gjb-page{max-width:1180px;margin:0 auto;padding:28px 32px 48px;color:#1f2937}
@@ -24,6 +30,7 @@ $channels = [
 .gjb-page .gjb-title{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px}
 .gjb-page .gjb-title h1{margin:0;font-size:26px;font-weight:700;color:#111827}
 .gjb-page .gjb-title p{margin:7px 0 0;color:#94a3b8;font-size:13px}
+.gjb-summary{display:flex;gap:10px}.gjb-summary-item{min-width:92px;padding:10px 13px;border:1px solid #e8edf3;border-radius:10px;background:#fff;text-align:left}.gjb-summary-item strong{display:block;font-size:17px;line-height:1.1;color:#111827}.gjb-summary-item span{display:block;margin-top:4px;color:#94a3b8;font-size:11px}
 .gjb-card{background:#fff;border:1px solid #e8edf3;border-radius:16px;box-shadow:0 8px 24px rgba(15,23,42,.045);margin-bottom:20px;overflow:hidden}
 .gjb-card-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #edf1f5}
 .gjb-card-head h2{margin:0;font-size:17px;font-weight:700;color:#111827}
@@ -58,13 +65,13 @@ $channels = [
 .gjb-badge{display:inline-flex;align-items:center;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:600}.gjb-badge.on{background:#dcfce7;color:#15803d}.gjb-badge.off{background:#f1f5f9;color:#64748b}
 .gjb-actions{display:flex;flex-wrap:wrap;gap:7px}.gjb-actions .btn{border-radius:8px;padding:7px 11px;font-size:12px}.gjb-actions .btn-info{background:#eff6ff;border-color:#bfdbfe;color:#2563eb}.gjb-actions .btn-warning{background:#fff7ed;border-color:#fed7aa;color:#c2410c}.gjb-actions .btn-success{background:#ecfdf5;border-color:#bbf7d0;color:#15803d}.gjb-actions .btn-primary{background:#111827;border-color:#111827;color:#fff}
 @media(max-width:900px){.gjb-page{padding:22px 18px 36px}.gjb-monitor{grid-template-columns:1fr;gap:18px}.gjb-status{min-height:0}.gjb-channel{grid-template-columns:1fr 90px;gap:14px}.gjb-channel-status{grid-column:2;grid-row:1}.gjb-channel-qr{grid-column:2;grid-row:2}.gjb-channel-info{grid-column:1;grid-row:1/span 2}.gjb-channel-actions{grid-column:1/-1;grid-row:3}.gjb-channel-note{max-width:none}}
-@media(max-width:560px){.gjb-page .gjb-title{display:block}.gjb-page .gjb-title h1{font-size:22px}.gjb-card-head{padding:17px}.gjb-monitor,.gjb-channels{padding:17px}.gjb-fields{grid-template-columns:1fr}.gjb-field-wide{grid-column:auto}.gjb-qr-wrap{display:block}.gjb-qr-wrap .help-block{margin-top:10px;max-width:none}.gjb-testbar{padding:15px 17px;flex-wrap:wrap}.gjb-testbar .help-block{width:100%}.gjb-channel{grid-template-columns:1fr 76px}.gjb-channel-status{grid-column:2}.gjb-channel-qr{grid-column:2}.gjb-channel-info{grid-column:1;grid-row:1/span 2}.gjb-actions .btn{flex:1;text-align:center}}
+@media(max-width:560px){.gjb-page .gjb-title{display:block}.gjb-page .gjb-title h1{font-size:22px}.gjb-summary{margin-top:16px}.gjb-summary-item{flex:1;min-width:0}.gjb-card-head{padding:17px}.gjb-monitor,.gjb-channels{padding:17px}.gjb-fields{grid-template-columns:1fr}.gjb-field-wide{grid-column:auto}.gjb-qr-wrap{display:block}.gjb-qr-wrap .help-block{margin-top:10px;max-width:none}.gjb-testbar{padding:15px 17px;flex-wrap:wrap}.gjb-testbar .help-block{width:100%}.gjb-channel{grid-template-columns:1fr 76px}.gjb-channel-status{grid-column:2}.gjb-channel-qr{grid-column:2}.gjb-channel-info{grid-column:1;grid-row:1/span 2}.gjb-actions .btn{flex:1;text-align:center}}
 </style>
 <div id="content" class="app-content" role="main">
   <div class="app-content-body">
     <div class="gjb-page">
       <input type="hidden" id="csrf_token" value="<?php echo $csrf_token?>">
-      <div class="gjb-title"><div><h1>通道管理</h1><p>配置监控端与个人收款渠道，订单到账会自动同步。</p></div></div>
+      <div class="gjb-title"><div><h1>通道管理</h1><p>配置监控端与个人收款渠道，订单到账会自动同步。</p></div><div class="gjb-summary"><div class="gjb-summary-item"><strong><?php echo $activeCount?> / <?php echo count($channels)?></strong><span>已开启通道</span></div><div class="gjb-summary-item"><strong><?php echo $uploadedCount?> / <?php echo count($channels)?></strong><span>已上传收款码</span></div></div></div>
       <section class="gjb-card">
         <div class="gjb-card-head"><h2>监控端</h2><small>挂机宝连接状态与配置</small></div>
         <div class="gjb-monitor">

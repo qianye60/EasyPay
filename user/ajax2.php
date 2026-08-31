@@ -27,10 +27,17 @@ case 'guajiUpload':
 	if(!is_dir($dir) && !mkdir($dir, 0755, true)) exit('{"code":-1,"msg":"无法创建上传目录"}');
 	$name = $uid.'_'.$field.'.'.$mimeMap[$info['mime']];
 	$dest = $dir.'/'.$name;
-	if(!move_uploaded_file($_FILES['file']['tmp_name'], $dest)) exit('{"code":-1,"msg":"保存失败"}');
+	$tmp = $dest.'.upload.'.bin2hex(random_bytes(6));
+	if(!move_uploaded_file($_FILES['file']['tmp_name'], $tmp)) exit('{"code":-1,"msg":"保存失败"}');
 	$rel = $dirRel.'/'.$name;
+	$typename = $field === 'wx_qr' ? 'wxpay' : ($field === 'ali_qr' ? 'alipay' : 'qqpay');
+	$payload = GuajiHelper::decodeQrFile($tmp);
+	if(!$payload){ @unlink($tmp); exit('{"code":-1,"msg":"无法识别二维码，请上传清晰、完整的收款码原图"}'); }
+	if(!rename($tmp, $dest)){ @unlink($tmp); exit('{"code":-1,"msg":"替换旧收款码失败"}'); }
+	foreach((array)glob($dir.'/'.$uid.'_'.$field.'.*') as $oldFile){ if($oldFile !== $dest && is_file($oldFile)) @unlink($oldFile); }
 	if(!GuajiHelper::saveQr($uid, $field, $rel)) exit('{"code":-1,"msg":"写入失败"}');
-	exit(json_encode(['code'=>0,'msg'=>'上传成功','url'=>'/'.$rel], JSON_UNESCAPED_UNICODE));
+	GuajiHelper::savePayload($uid, $typename, $payload);
+	exit(json_encode(['code'=>0,'msg'=>'收款码已重新上传并解析成功','url'=>'/'.$rel.'?v='.time()], JSON_UNESCAPED_UNICODE));
 break;
 case 'info':
 	if($userrow['open_wxa'] == 0) exit('{"code":-1,"msg":"商户未开启微信小程序功能"}');
