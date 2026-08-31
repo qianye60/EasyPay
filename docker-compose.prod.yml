@@ -15,7 +15,7 @@ services:
       - epay-network
 
   php:
-    image: ghcr.io/aliveranme/epay:latest
+    image: ${EPAY_IMAGE:-ghcr.io/qianye60/easypay:latest}
     container_name: epay-php
     restart: unless-stopped
     environment:
