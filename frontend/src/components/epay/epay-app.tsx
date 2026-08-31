@@ -12,7 +12,6 @@ import {
   CreditCard,
   FileText,
   LayoutDashboard,
-  LifeBuoy,
   Loader2,
   LogOut,
   MessageCircle,
@@ -67,20 +66,11 @@ import {
 } from "@/components/epay/test-payment"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -507,13 +497,13 @@ function Brand({
 }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-sm ring-1 ring-primary/20">
         <CircleDollarSign className="size-5" aria-hidden="true" />
       </div>
       {!compact && (
         <div className="min-w-0 leading-tight">
-          <p className="truncate font-semibold tracking-tight">{name}</p>
-          <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>
+          <p className="truncate font-semibold tracking-tight text-foreground text-sm">{name}</p>
+          <p className="truncate text-[11px] text-muted-foreground font-medium">{subtitle}</p>
         </div>
       )}
     </div>
@@ -534,11 +524,13 @@ function NavLeaf({
   const link = (
     <Button
       asChild
-      variant={active ? "secondary" : "ghost"}
+      variant="ghost"
       className={cn(
-        "h-9 rounded-lg font-normal",
+        "h-9 rounded-lg font-normal transition-all duration-150",
         collapsed ? "size-9 justify-center px-0" : "w-full justify-start gap-2.5 px-2.5",
-        active && "font-medium"
+        active
+          ? "bg-primary/10 text-primary font-semibold dark:bg-primary/20 dark:text-primary-foreground hover:bg-primary/15"
+          : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
       )}
     >
       <a
@@ -548,7 +540,13 @@ function NavLeaf({
         target={item.external ? "_blank" : undefined}
         rel={item.external ? "noopener noreferrer" : undefined}
       >
-        <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <Icon
+          className={cn(
+            "size-4 shrink-0 transition-colors",
+            active ? "text-primary dark:text-primary-foreground" : "text-muted-foreground"
+          )}
+          aria-hidden="true"
+        />
         {!collapsed && <span className="truncate">{item.label}</span>}
       </a>
     </Button>
@@ -610,7 +608,10 @@ function NavGroups({
                   <PopoverTrigger asChild>
                     <Button
                       variant={groupActive ? "secondary" : "ghost"}
-                      className="size-9 justify-center rounded-lg px-0"
+                      className={cn(
+                        "size-9 justify-center rounded-lg px-0",
+                        groupActive && "bg-primary/10 text-primary dark:bg-primary/20"
+                      )}
                       aria-label={group.label}
                     >
                       <GroupIcon className="size-4 text-muted-foreground" />
@@ -620,7 +621,7 @@ function NavGroups({
                 <TooltipContent side="right">{group.label}</TooltipContent>
               </Tooltip>
               <PopoverContent side="right" align="start" className="w-52 p-2">
-                <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   {group.label}
                 </p>
                 {group.items.map((item) => (
@@ -635,22 +636,27 @@ function NavGroups({
           <div key={group.id} className="grid gap-0.5">
             <Button
               type="button"
-              variant={groupActive ? "secondary" : "ghost"}
-              className="h-9 w-full justify-start gap-2.5 rounded-lg px-2.5 font-medium"
+              variant="ghost"
+              className={cn(
+                "h-9 w-full justify-start gap-2.5 rounded-lg px-2.5 font-medium transition-all duration-150",
+                groupActive
+                  ? "text-foreground font-semibold"
+                  : "text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+              )}
               onClick={() => toggle(group.id)}
               aria-expanded={open}
             >
               <GroupIcon className="size-4 shrink-0 text-muted-foreground" />
-              <span className="truncate">{group.label}</span>
+              <span className="truncate text-xs font-semibold uppercase tracking-wider">{group.label}</span>
               <ChevronDown
                 className={cn(
-                  "ml-auto size-4 text-muted-foreground transition-transform",
+                  "ml-auto size-3.5 text-muted-foreground transition-transform duration-200",
                   open && "rotate-180"
                 )}
               />
             </Button>
             {open && (
-              <div className="ml-3 grid gap-0.5 border-l pl-2">
+              <div className="ml-3 grid gap-0.5 border-l border-border/60 pl-2">
                 {group.items.map((item) => (
                   <NavLeaf key={item.href} item={item} onNavigate={onNavigate} />
                 ))}
@@ -724,13 +730,15 @@ function WorkspaceShell({
   description,
   sitename = "Rainbow Pay",
   features,
+  user,
 }: {
   children: React.ReactNode
   kind: "admin" | "merchant"
   title: string
-  description: string
+  description?: string
   sitename?: string
   features?: JsonObject
+  user?: JsonObject
 }) {
   const { resolvedTheme, setTheme } = useTheme()
   const dark = resolvedTheme === "dark"
@@ -759,38 +767,67 @@ function WorkspaceShell({
     })
   }
 
+  const userObj = user || {}
+  const displayName = String(
+    userObj.username ||
+      userObj.account ||
+      (userObj.uid ? `商户 #${userObj.uid}` : kind === "admin" ? "超级管理员" : "商户账户")
+  )
+  const userSubtext =
+    kind === "admin" ? "平台运营模式" : userObj.uid ? `UID: ${userObj.uid}` : "商户自收款"
+
   const accountMenu = (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-10 gap-2 rounded-xl px-2">
-          <Avatar className="size-7">
-            <AvatarFallback>{kind === "admin" ? "AD" : "商户"}</AvatarFallback>
+        <Button
+          variant="ghost"
+          className="h-9 gap-2 rounded-xl px-2 text-xs font-medium hover:bg-muted/80"
+        >
+          <Avatar className="size-6 ring-1 ring-border/80">
+            <AvatarFallback className="bg-primary/10 text-primary text-[11px] font-semibold">
+              {kind === "admin" ? "管" : "商"}
+            </AvatarFallback>
           </Avatar>
-          <span className="hidden text-sm sm:inline">
-            {kind === "admin" ? "管理员" : "商户账户"}
+          <span className="hidden text-xs sm:inline font-medium max-w-28 truncate">
+            {displayName}
           </span>
+          <ChevronDown className="size-3 text-muted-foreground/60" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-52 rounded-xl p-1.5 shadow-lg">
+        <div className="flex items-center gap-2.5 px-2.5 py-2 border-b mb-1">
+          <Avatar className="size-8">
+            <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+              {kind === "admin" ? "AD" : "商户"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-foreground truncate">{displayName}</p>
+            <p className="text-[10px] text-muted-foreground truncate">{userSubtext}</p>
+          </div>
+        </div>
         <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
+          <DropdownMenuItem asChild className="rounded-lg text-xs">
             <a href={kind === "admin" ? "./set.php?mod=account" : "editinfo.php"}>
-              <Settings data-icon="inline-start" />
+              <Settings className="size-3.5" data-icon="inline-start" />
               账户设置
             </a>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
+          <DropdownMenuItem asChild className="rounded-lg text-xs">
             <a href="/doc.html" target="_blank" rel="noreferrer">
-              <FileText data-icon="inline-start" />
+              <FileText className="size-3.5" data-icon="inline-start" />
               开发文档
             </a>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
+          <DropdownMenuItem
+            asChild
+            className="rounded-lg text-xs text-destructive focus:text-destructive"
+          >
             <a href={kind === "admin" ? "./login.php?logout" : "login.php?logout"}>
-              <LogOut data-icon="inline-start" />
+              <LogOut className="size-3.5" data-icon="inline-start" />
               退出登录
             </a>
           </DropdownMenuItem>
@@ -804,13 +841,13 @@ function WorkspaceShell({
       <div className="flex min-h-svh bg-muted/30 text-foreground antialiased">
         <aside
           className={cn(
-            "sticky top-0 hidden h-svh shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 md:flex",
+            "sticky top-0 hidden h-svh shrink-0 flex-col border-r border-border/60 bg-sidebar text-sidebar-foreground transition-[width] duration-200 md:flex",
             collapsed ? "w-[72px]" : "w-[240px]"
           )}
         >
           <div
             className={cn(
-              "flex h-16 items-center border-b",
+              "flex h-16 items-center border-b border-border/60",
               collapsed ? "justify-center px-2" : "px-4"
             )}
           >
@@ -822,7 +859,7 @@ function WorkspaceShell({
           >
             <NavGroups items={nav} collapsed={collapsed} />
           </PersistentNavScrollArea>
-          <div className={cn("border-t p-2", collapsed ? "px-2" : "px-3")}>
+          <div className={cn("border-t border-border/60 p-2", collapsed ? "px-2" : "px-3")}>
             <Button
               type="button"
               variant="ghost"
@@ -845,67 +882,80 @@ function WorkspaceShell({
           </div>
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur-xl">
-            <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
-              <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="md:hidden"
-                    aria-label="打开导航"
-                  >
-                    <Menu className="size-5" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-[280px] p-0">
-                  <SheetHeader className="border-b px-5 py-4 text-left">
-                    <SheetTitle>
-                      <Brand name={sitename} subtitle={subtitle} />
-                    </SheetTitle>
-                    <SheetDescription>
-                      {kind === "admin" ? "平台运营" : "商户自收款与监听套餐"}
-                    </SheetDescription>
-                  </SheetHeader>
-                  <PersistentNavScrollArea
-                    storageKey={`epay-nav-${kind}-mobile`}
-                    className="h-[calc(100vh-118px)] px-3 py-4"
-                  >
-                    <NavGroups items={nav} onNavigate={() => setMobileOpen(false)} />
-                  </PersistentNavScrollArea>
-                </SheetContent>
-              </Sheet>
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{title}</p>
-                <p className="hidden truncate text-xs text-muted-foreground sm:block">
-                  {description}
-                </p>
+          <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+            <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
+              <div className="flex min-w-0 items-center gap-3">
+                <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+                  <SheetTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-9 rounded-xl md:hidden"
+                      aria-label="打开导航"
+                    >
+                      <Menu className="size-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-[280px] p-0">
+                    <SheetHeader className="border-b px-5 py-4 text-left">
+                      <SheetTitle>
+                        <Brand name={sitename} subtitle={subtitle} />
+                      </SheetTitle>
+                      <SheetDescription>
+                        {description || (kind === "admin" ? "平台运营" : "商户自收款与监听套餐")}
+                      </SheetDescription>
+                    </SheetHeader>
+                    <PersistentNavScrollArea
+                      storageKey={`epay-nav-${kind}-mobile`}
+                      className="h-[calc(100vh-118px)] px-3 py-4"
+                    >
+                      <NavGroups items={nav} onNavigate={() => setMobileOpen(false)} />
+                    </PersistentNavScrollArea>
+                  </SheetContent>
+                </Sheet>
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="font-medium">
+                      {kind === "admin" ? "管理控制台" : "商户中心"}
+                    </span>
+                    <ChevronRight className="size-3.5 text-muted-foreground/40" />
+                  </div>
+                  <h2 className="truncate text-sm font-semibold text-foreground">{title}</h2>
+                </div>
               </div>
-              <div className="ml-auto flex items-center gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-2">
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="hidden rounded-xl text-xs gap-1.5 text-muted-foreground hover:text-foreground sm:inline-flex"
+                >
+                  <a
+                    href="/doc.html"
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="打开开发文档"
+                  >
+                    <BookOpen className="size-3.5" />
+                    <span>接口文档</span>
+                  </a>
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="rounded-xl"
+                  className="size-9 rounded-xl text-muted-foreground hover:text-foreground"
                   onClick={() => setTheme(dark ? "light" : "dark")}
                   aria-label={dark ? "切换亮色模式" : "切换暗色模式"}
                 >
                   {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
                 </Button>
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="icon"
-                  className="hidden rounded-xl sm:inline-flex"
-                >
-                  <a href="/doc.html" aria-label="打开开发文档">
-                    <LifeBuoy className="size-4" />
-                  </a>
-                </Button>
                 {accountMenu}
               </div>
             </div>
           </header>
-          <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+          <main className="min-w-0 flex-1 px-4 pt-6 pb-8 sm:px-6 sm:pt-8 sm:pb-10 lg:px-8 lg:pt-9 lg:pb-12 max-w-7xl w-full mx-auto">
+            {children}
+          </main>
         </div>
       </div>
     </TooltipProvider>
@@ -919,34 +969,30 @@ function PageHeading({
   action,
   brandName = "Rainbow Pay",
 }: {
-  eyebrow: string
+  eyebrow?: string
   title: string
   description: string
   action?: React.ReactNode
   brandName?: string
 }) {
   return (
-    <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/50 pb-4">
       <div className="min-w-0">
-        <Breadcrumb className="mb-3">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/">{brandName}</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>{eyebrow}</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        {eyebrow && (
+          <div className="mb-1 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <span>{brandName}</span>
+            <ChevronRight className="size-3 text-muted-foreground/50" />
+            <span>{eyebrow}</span>
+          </div>
+        )}
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl text-foreground">
           {title}
         </h1>
-        <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+        <p className="mt-1 max-w-2xl text-xs sm:text-sm text-muted-foreground leading-snug">
           {description}
         </p>
       </div>
-      {action}
+      {action && <div className="flex flex-wrap items-center gap-2 shrink-0">{action}</div>}
     </div>
   )
 }
@@ -1276,40 +1322,53 @@ function StatCard({
   tone?: "blue" | "green" | "amber" | "violet"
   loading?: boolean
 }) {
-  const toneClass = {
-    blue: "bg-primary/10 text-primary",
-    green: "bg-secondary text-secondary-foreground",
-    amber: "bg-accent text-accent-foreground",
-    violet: "bg-muted text-muted-foreground",
+  const toneStyles = {
+    blue: {
+      icon: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+      badge: "text-blue-600 dark:text-blue-400 bg-blue-500/10",
+    },
+    green: {
+      icon: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+      badge: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10",
+    },
+    amber: {
+      icon: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+      badge: "text-amber-600 dark:text-amber-400 bg-amber-500/10",
+    },
+    violet: {
+      icon: "bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20",
+      badge: "text-violet-600 dark:text-violet-400 bg-violet-500/10",
+    },
   }[tone]
+
   return (
-    <Card className="group overflow-hidden rounded-2xl border bg-card shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm text-muted-foreground">{label}</p>
-            {loading ? (
-              <Skeleton className="mt-3 h-8 w-28" />
-            ) : (
-              <p className="mt-2 truncate text-2xl font-semibold tracking-tight">
-                {value}
-              </p>
-            )}
-            <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-              <ArrowUpRight className="size-3 text-primary" />
-              {hint}
+    <Card className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md hover:border-border">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-muted-foreground/80 tracking-wide uppercase">{label}</p>
+          {loading ? (
+            <Skeleton className="mt-3 h-8 w-28" />
+          ) : (
+            <p className="mt-2 truncate text-2xl lg:text-3xl font-bold tracking-tight tabular-nums text-foreground">
+              {value}
             </p>
-          </div>
-          <div
-            className={cn(
-              "flex size-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110",
-              toneClass
-            )}
-          >
-            <Icon className="size-5" />
+          )}
+          <div className="mt-2.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium", toneStyles.badge)}>
+              <ArrowUpRight className="size-3" />
+              {hint}
+            </span>
           </div>
         </div>
-      </CardContent>
+        <div
+          className={cn(
+            "flex size-11 shrink-0 items-center justify-center rounded-xl border transition-transform duration-200 group-hover:scale-105",
+            toneStyles.icon
+          )}
+        >
+          <Icon className="size-5" />
+        </div>
+      </div>
     </Card>
   )
 }
@@ -1365,21 +1424,22 @@ function AdminDashboard({ config }: { config?: JsonObject }) {
   const rows = Object.entries(order).slice(0, 7)
   const sitename = String(config?.sitename ?? "Rainbow Pay")
   const features = objectOf(config, "features")
+  const user = objectOf(config, "user")
   return (
     <WorkspaceShell
       kind="admin"
-      title="平台运营"
+      title="运营总览"
       description="管理商户自收款、回调监听套餐与支付通道"
       sitename={sitename}
       features={features}
+      user={user}
     >
       <PageHeading
-        eyebrow="平台首页"
         title="运营总览"
         description="平台提供回调与监听服务，商户使用自己的收款码收款。"
         brandName={sitename}
         action={
-          <Button onClick={load} variant="outline" className="rounded-xl">
+          <Button onClick={load} variant="outline" className="rounded-xl shadow-xs">
             <RefreshCw data-icon="inline-start" />
             刷新数据
           </Button>
@@ -1426,42 +1486,42 @@ function AdminDashboard({ config }: { config?: JsonObject }) {
             />
           </div>
           <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,.6fr)]">
-            <Card className="rounded-2xl shadow-sm">
-              <CardHeader className="flex flex-row items-start justify-between gap-3">
+            <Card className="rounded-2xl border-border/70 shadow-xs">
+              <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-border/50 pb-4">
                 <div>
-                  <CardTitle className="text-base">近期开单趋势</CardTitle>
-                  <CardDescription>按日期汇总的订单金额与笔数</CardDescription>
+                  <CardTitle className="text-base font-semibold">近期开单趋势</CardTitle>
+                  <CardDescription className="text-xs mt-0.5">按日期汇总的订单金额与笔数</CardDescription>
                 </div>
-                <Badge variant="outline" className="rounded-lg font-normal">
+                <Badge variant="outline" className="rounded-lg font-normal text-xs">
                   自动更新
                 </Badge>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-4">
                 <Tabs defaultValue="amount">
                   <TabsList className="mb-4 rounded-xl">
-                    <TabsTrigger value="amount">订单金额</TabsTrigger>
-                    <TabsTrigger value="count">订单数量</TabsTrigger>
+                    <TabsTrigger value="amount" className="rounded-lg text-xs">订单金额</TabsTrigger>
+                    <TabsTrigger value="count" className="rounded-lg text-xs">订单数量</TabsTrigger>
                   </TabsList>
                   <TabsContent value="amount" className="mt-0">
                     <Table>
                       <TableHeader>
-                        <TableRow>
-                          <TableHead>日期</TableHead>
-                          <TableHead className="text-right">订单金额</TableHead>
-                          <TableHead className="text-right">订单数</TableHead>
+                        <TableRow className="bg-muted/30">
+                          <TableHead className="font-semibold text-xs py-3">日期</TableHead>
+                          <TableHead className="text-right font-semibold text-xs py-3">订单金额</TableHead>
+                          <TableHead className="text-right font-semibold text-xs py-3 pr-6">订单数</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {rows.length ? (
                           rows.map(([date, row]) => (
-                            <TableRow key={date}>
-                              <TableCell className="font-medium">
+                            <TableRow key={date} className="hover:bg-muted/40">
+                              <TableCell className="font-medium text-sm py-3.5">
                                 {date}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right font-medium text-sm tabular-nums py-3.5">
                                 ¥ {valueOf(row as JsonObject, "all")}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className="text-right font-medium text-sm tabular-nums py-3.5 pr-6">
                                 {valueOf(row as JsonObject, "count", "—")}
                               </TableCell>
                             </TableRow>
@@ -1470,7 +1530,7 @@ function AdminDashboard({ config }: { config?: JsonObject }) {
                           <TableRow>
                             <TableCell
                               colSpan={3}
-                              className="h-24 text-center text-muted-foreground"
+                              className="h-28 text-center text-muted-foreground text-sm"
                             >
                               暂无趋势数据
                             </TableCell>
@@ -1486,12 +1546,12 @@ function AdminDashboard({ config }: { config?: JsonObject }) {
                         .map(([key, value]) => (
                           <div
                             key={key}
-                            className="rounded-xl border bg-muted/30 p-4"
+                            className="rounded-xl border border-border/60 bg-muted/30 p-4"
                           >
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground font-medium">
                               {key}
                             </p>
-                            <p className="mt-2 text-xl font-semibold">
+                            <p className="mt-2 text-xl font-bold tabular-nums text-foreground">
                               {String(value)}
                             </p>
                           </div>
@@ -1501,97 +1561,68 @@ function AdminDashboard({ config }: { config?: JsonObject }) {
                 </Tabs>
               </CardContent>
             </Card>
-            <Card className="rounded-2xl shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">快捷入口</CardTitle>
-                <CardDescription>高频运营动作</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-2 sm:grid-cols-2">
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-11 justify-between rounded-xl"
-                >
-                  <a href="./order.php">
-                    <span className="flex items-center gap-2">
-                      <FileText className="size-4 text-primary" />
-                      订单管理
-                    </span>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </a>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-11 justify-between rounded-xl"
-                >
-                  <a href="./ulist.php">
-                    <span className="flex items-center gap-2">
-                      <Users className="size-4 text-secondary-foreground" />
-                      商户列表
-                    </span>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </a>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-11 justify-between rounded-xl"
-                >
-                  <a href="./pay_channel.php">
-                    <span className="flex items-center gap-2">
-                      <CreditCard className="size-4 text-primary" />
-                      支付通道
-                    </span>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </a>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-11 justify-between rounded-xl"
-                >
-                  <a href="./transfer.php">
-                    <span className="flex items-center gap-2">
-                      <WalletCards className="size-4 text-accent-foreground" />
-                      付款记录
-                    </span>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </a>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-11 justify-between rounded-xl"
-                >
-                  <a href="./slist.php">
-                    <span className="flex items-center gap-2">
-                      <PackageCheck className="size-4 text-muted-foreground" />
-                      结算管理
-                    </span>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </a>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-11 justify-between rounded-xl"
-                >
-                  <a href="./set.php?mod=site">
-                    <span className="flex items-center gap-2">
-                      <Settings className="size-4 text-muted-foreground" />
-                      网站设置
-                    </span>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </a>
-                </Button>
-              </CardContent>
-              <CardFooter>
-                <p className="text-xs text-muted-foreground">
-                  平台时间：{new Date().toLocaleString("zh-CN")}
-                </p>
-              </CardFooter>
-            </Card>
+            <div className="flex flex-col gap-6">
+              <Card className="rounded-2xl border-border/70 shadow-xs">
+                <CardHeader className="border-b border-border/50 pb-4">
+                  <CardTitle className="text-base font-semibold">快捷运营操作</CardTitle>
+                  <CardDescription className="text-xs mt-0.5">常用管理入口与配置</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-2 pt-4">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-10 justify-between rounded-xl hover:bg-muted/60 text-xs font-normal"
+                  >
+                    <a href="order.php">
+                      <span className="flex items-center gap-2.5">
+                        <FileText className="size-4 text-muted-foreground" />
+                        所有订单记录
+                      </span>
+                      <ChevronRight className="size-3.5 text-muted-foreground/60" />
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-10 justify-between rounded-xl hover:bg-muted/60 text-xs font-normal"
+                  >
+                    <a href="ulist.php">
+                      <span className="flex items-center gap-2.5">
+                        <Users className="size-4 text-muted-foreground" />
+                        商户列表管理
+                      </span>
+                      <ChevronRight className="size-3.5 text-muted-foreground/60" />
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-10 justify-between rounded-xl hover:bg-muted/60 text-xs font-normal"
+                  >
+                    <a href="pay_channel.php">
+                      <span className="flex items-center gap-2.5">
+                        <CreditCard className="size-4 text-muted-foreground" />
+                        支付通道与插件
+                      </span>
+                      <ChevronRight className="size-3.5 text-muted-foreground/60" />
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-10 justify-between rounded-xl hover:bg-muted/60 text-xs font-normal"
+                  >
+                    <a href="settle.php">
+                      <span className="flex items-center gap-2.5">
+                        <WalletCards className="size-4 text-muted-foreground" />
+                        结算与代付
+                      </span>
+                      <ChevronRight className="size-3.5 text-muted-foreground/60" />
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </>
       )}
@@ -1624,42 +1655,43 @@ function MerchantDashboard({ config }: { config?: JsonObject }) {
     : []
   const sitename = String(config?.sitename ?? "Rainbow Pay")
   const features = objectOf(config, "features")
+  const user = objectOf(config, "user")
   return (
     <WorkspaceShell
       kind="merchant"
-      title="商户工作台"
+      title="工作台"
       description="用自己的收款码收款，平台负责回调与到账监听"
       sitename={sitename}
       features={features}
+      user={user}
     >
       <PageHeading
-        eyebrow="用户中心"
         title="欢迎回来"
         description="钱直接进入你的微信 / 支付宝。购买监听套餐后，到账通知会自动回调订单。"
         brandName={sitename}
         action={
-          <div className="flex gap-2">
-            <Button asChild variant="outline" className="rounded-xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="outline" className="rounded-xl shadow-xs">
               <a href="channel.php">
                 <QrCode data-icon="inline-start" />
                 通道管理
               </a>
             </Button>
-            <Button asChild variant="outline" className="rounded-xl">
+            <Button asChild variant="outline" className="rounded-xl shadow-xs">
               <a href="userinfo.php?mod=api">
                 <ShieldCheck data-icon="inline-start" />
                 API 信息
               </a>
             </Button>
             {featureEnabled(features, "groupbuy") && (
-              <Button asChild variant="outline" className="rounded-xl">
+              <Button asChild variant="outline" className="rounded-xl shadow-xs">
                 <a href="groupbuy.php">
                   <PackageCheck data-icon="inline-start" />
                   监听套餐
                 </a>
               </Button>
             )}
-            <Button asChild className="rounded-xl">
+            <Button asChild className="rounded-xl shadow-sm">
               <a href="order.php">查看订单</a>
             </Button>
           </div>
@@ -1706,49 +1738,63 @@ function MerchantDashboard({ config }: { config?: JsonObject }) {
             />
           </div>
           <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,.85fr)]">
-            <Card className="rounded-2xl shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">支付渠道表现</CardTitle>
-                <CardDescription>各渠道今日收入、成功率与费率</CardDescription>
+            <Card className="rounded-2xl border-border/70 shadow-xs">
+              <CardHeader className="border-b border-border/50 pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base font-semibold">支付渠道表现</CardTitle>
+                    <CardDescription className="text-xs mt-0.5">各渠道今日收入、成功率与费率</CardDescription>
+                  </div>
+                  <Button asChild variant="ghost" size="sm" className="h-8 rounded-lg text-xs text-muted-foreground">
+                    <a href="channel.php">管理渠道</a>
+                  </Button>
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>渠道</TableHead>
-                      <TableHead>今日收入</TableHead>
-                      <TableHead>成功率</TableHead>
-                      <TableHead className="text-right">费率</TableHead>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="font-semibold text-xs py-3">渠道</TableHead>
+                      <TableHead className="font-semibold text-xs py-3">今日收入</TableHead>
+                      <TableHead className="font-semibold text-xs py-3">成功率</TableHead>
+                      <TableHead className="text-right font-semibold text-xs py-3 pr-6">费率</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {channels.length ? (
                       channels.map((channel) => (
-                        <TableRow key={String(channel.name)}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                                <CreditCard className="size-4 text-muted-foreground" />
+                        <TableRow key={String(channel.name)} className="hover:bg-muted/40">
+                          <TableCell className="py-3.5">
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
+                                <CreditCard className="size-4" />
                               </div>
-                              <span className="font-medium">
+                              <span className="font-medium text-sm">
                                 {String(
                                   channel.showname ?? channel.name ?? "渠道"
                                 )}
                               </span>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="font-medium text-sm tabular-nums py-3.5">
                             ¥ {String(channel.order_today ?? "0")}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="py-3.5">
                             <Badge
                               variant="secondary"
-                              className="rounded-lg font-normal"
+                              className={cn(
+                                "rounded-md font-medium text-xs tabular-nums",
+                                Number(channel.success_rate || 0) >= 80
+                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                                  : Number(channel.success_rate || 0) > 0
+                                  ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                                  : "bg-muted text-muted-foreground"
+                              )}
                             >
                               {String(channel.success_rate ?? "0")} %
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className="text-right font-medium text-sm tabular-nums py-3.5 pr-6">
                             {String(channel.rate ?? "0")} %
                           </TableCell>
                         </TableRow>
@@ -1757,7 +1803,7 @@ function MerchantDashboard({ config }: { config?: JsonObject }) {
                       <TableRow>
                         <TableCell
                           colSpan={4}
-                          className="h-24 text-center text-muted-foreground"
+                          className="h-28 text-center text-muted-foreground text-sm"
                         >
                           暂无渠道数据
                         </TableCell>
@@ -1767,90 +1813,92 @@ function MerchantDashboard({ config }: { config?: JsonObject }) {
                 </Table>
               </CardContent>
             </Card>
-            <Card className="rounded-2xl shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-base">账户状态</CardTitle>
-                <CardDescription>保持资料完整，收款更顺畅</CardDescription>
+            <Card className="rounded-2xl border-border/70 shadow-xs">
+              <CardHeader className="border-b border-border/50 pb-4">
+                <CardTitle className="text-base font-semibold">账户状态与快捷操作</CardTitle>
+                <CardDescription className="text-xs mt-0.5">保持资料完整，收款更顺畅</CardDescription>
               </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <div className="flex items-center gap-3 rounded-xl border bg-primary/5 p-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <CardContent className="flex flex-col gap-3 pt-4">
+                <div className="flex items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-emerald-900 dark:text-emerald-200">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
                     <Check className="size-4" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">商户服务正常</p>
-                    <p className="text-xs text-muted-foreground">
-                      收款与结算功能均已开启
+                    <p className="text-xs font-semibold">商户服务运行正常</p>
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                      收款、监听与回调功能均已开启
                     </p>
                   </div>
                 </div>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-11 w-full justify-between rounded-xl"
-                >
-                  <a href="editinfo.php">
-                    <span className="flex items-center gap-2">
-                      <Settings className="size-4" />
-                      完善商户资料
-                    </span>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </a>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-11 w-full justify-between rounded-xl"
-                >
-                  <a href="settle.php">
-                    <span className="flex items-center gap-2">
-                      <PackageCheck className="size-4" />
-                      查看结算记录
-                    </span>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </a>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-11 w-full justify-between rounded-xl"
-                >
-                  <a href="./record.php">
-                    <span className="flex items-center gap-2">
-                      <BarChart3 className="size-4" />
-                      查看资金明细
-                    </span>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </a>
-                </Button>
-                {featureEnabled(features, "withdraw") && (
+                <div className="grid gap-2">
                   <Button
                     asChild
                     variant="outline"
-                    className="h-11 w-full justify-between rounded-xl"
+                    className="h-10 w-full justify-between rounded-xl hover:bg-muted/60 text-xs font-normal"
                   >
-                    <a href="./apply.php">
-                      <span className="flex items-center gap-2">
-                        <ArrowUpRight className="size-4" />
-                        申请提现
+                    <a href="editinfo.php">
+                      <span className="flex items-center gap-2.5">
+                        <Settings className="size-4 text-muted-foreground" />
+                        完善商户资料
                       </span>
-                      <ChevronRight className="size-4 text-muted-foreground" />
+                      <ChevronRight className="size-3.5 text-muted-foreground/60" />
                     </a>
                   </Button>
-                )}
-                <Button
-                  asChild
-                  variant="outline"
-                  className="h-11 w-full justify-between rounded-xl"
-                >
-                  <a href="./userinfo.php?mod=account">
-                    <span className="flex items-center gap-2">
-                      <ShieldCheck className="size-4" />
-                      修改密码
-                    </span>
-                    <ChevronRight className="size-4 text-muted-foreground" />
-                  </a>
-                </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-10 w-full justify-between rounded-xl hover:bg-muted/60 text-xs font-normal"
+                  >
+                    <a href="settle.php">
+                      <span className="flex items-center gap-2.5">
+                        <PackageCheck className="size-4 text-muted-foreground" />
+                        查看结算记录
+                      </span>
+                      <ChevronRight className="size-3.5 text-muted-foreground/60" />
+                    </a>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-10 w-full justify-between rounded-xl hover:bg-muted/60 text-xs font-normal"
+                  >
+                    <a href="./record.php">
+                      <span className="flex items-center gap-2.5">
+                        <BarChart3 className="size-4 text-muted-foreground" />
+                        查看资金明细
+                      </span>
+                      <ChevronRight className="size-3.5 text-muted-foreground/60" />
+                    </a>
+                  </Button>
+                  {featureEnabled(features, "withdraw") && (
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="h-10 w-full justify-between rounded-xl hover:bg-muted/60 text-xs font-normal"
+                    >
+                      <a href="./apply.php">
+                        <span className="flex items-center gap-2.5">
+                          <ArrowUpRight className="size-4 text-muted-foreground" />
+                          申请提现
+                        </span>
+                        <ChevronRight className="size-3.5 text-muted-foreground/60" />
+                      </a>
+                    </Button>
+                  )}
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="h-10 w-full justify-between rounded-xl hover:bg-muted/60 text-xs font-normal"
+                  >
+                    <a href="./userinfo.php?mod=account">
+                      <span className="flex items-center gap-2.5">
+                        <ShieldCheck className="size-4 text-muted-foreground" />
+                        修改安全密码
+                      </span>
+                      <ChevronRight className="size-3.5 text-muted-foreground/60" />
+                    </a>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </div>

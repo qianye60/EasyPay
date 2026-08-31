@@ -38,48 +38,53 @@ foreach($channels as $channel){
 }
 ?>
 <style>
-.gjb-page{max-width:1240px;margin:0 auto;padding:24px 28px 48px;color:#0f172a}
+.gjb-page{max-width:1080px;margin:0 auto;padding:8px 4px 32px;color:#0f172a}
 .gjb-page *{box-sizing:border-box}
-.gjb-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:22px}
-.gjb-hero h1{margin:0;font-size:24px;font-weight:700}
+.gjb-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:18px}
+.gjb-hero h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em}
 .gjb-hero p{margin:6px 0 0;color:#64748b;font-size:13px;line-height:1.5}
 .gjb-stats{display:flex;gap:8px;flex-shrink:0}
-.gjb-stat{min-width:88px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #e2e8f0}
+.gjb-stat{min-width:84px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #e2e8f0}
 .gjb-stat b{display:block;font-size:18px;line-height:1.1}
 .gjb-stat span{display:block;margin-top:4px;font-size:11px;color:#94a3b8}
-.gjb-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;margin-bottom:18px;overflow:hidden;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.gjb-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
 .gjb-card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #f1f5f9}
 .gjb-card-hd h2{margin:0;font-size:15px;font-weight:700}
 .gjb-card-hd small{color:#94a3b8;font-size:12px}
-.gjb-monitor{display:grid;grid-template-columns:200px 1fr;gap:0}
-.gjb-aside{padding:20px;border-right:1px solid #f1f5f9;background:#f8fafc}
-.gjb-aside.online{background:#ecfdf5}
-.gjb-live{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:700;color:#64748b}
+.gjb-monitor{display:grid;grid-template-columns:180px minmax(0,1fr);gap:0}
+.gjb-aside{padding:20px;border-right:1px solid #f1f5f9;background:linear-gradient(180deg,#f8fafc 0%,#fff 100%);border-radius:0 0 0 16px}
+.gjb-aside.online{background:linear-gradient(180deg,#ecfdf5 0%,#fff 55%)}
+.gjb-live{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:700;color:#64748b}
 .gjb-aside.online .gjb-live{color:#15803d}
 .gjb-dot{width:8px;height:8px;border-radius:50%;background:#94a3b8}
 .gjb-aside.online .gjb-dot{background:#22c55e;box-shadow:0 0 0 4px rgba(34,197,94,.15)}
-.gjb-meta{margin-top:16px;font-size:12px;color:#64748b;line-height:1.7}
+.gjb-meta{margin-top:14px;font-size:12px;color:#64748b;line-height:1.7}
 .gjb-meta strong{display:block;color:#334155;font-weight:600;word-break:break-all}
 .gjb-meta + .gjb-meta{margin-top:12px;padding-top:12px;border-top:1px solid #e2e8f0}
-.gjb-aside .btn{margin-top:16px;border-radius:8px;width:100%}
-.gjb-main{padding:20px;display:grid;grid-template-columns:180px 1fr;gap:20px;align-items:start}
+.gjb-aside .gjb-dl{display:inline-flex;margin-top:16px;width:100%;min-height:36px;align-items:center;justify-content:center;border-radius:10px;background:#0f172a;color:#fff;font-size:13px;font-weight:600;text-decoration:none;border:0}
+.gjb-aside .gjb-dl:hover{background:#1e293b;color:#fff;text-decoration:none}
+.gjb-main{padding:20px;display:grid;grid-template-columns:160px minmax(0,1fr);gap:18px;align-items:start;min-width:0}
 .gjb-scan{text-align:center}
-#gjb-qr{display:inline-flex;padding:10px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;min-height:160px;min-width:160px;align-items:center;justify-content:center}
+#gjb-qr{display:inline-flex;padding:10px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;min-height:150px;min-width:150px;align-items:center;justify-content:center}
 .gjb-scan p{margin:10px 0 0;font-size:12px;color:#94a3b8;line-height:1.5}
-.gjb-fields{display:flex;flex-direction:column;gap:12px}
+.gjb-fields{display:flex;flex-direction:column;gap:12px;min-width:0}
 .gjb-field label{display:block;margin:0 0 6px;font-size:12px;font-weight:600;color:#475569}
-.gjb-field .input-group{display:flex;width:100%;gap:0!important}
-.gjb-field .input-group .form-control{height:38px;width:auto!important;min-width:0;flex:1 1 auto;border-color:#e2e8f0;box-shadow:none;border-radius:8px 0 0 8px;background:#f8fafc;color:#334155;font-size:13px}
-.gjb-field .input-group-btn{display:flex;flex:0 0 auto}
-.gjb-field .form-control:focus{border-color:#94a3b8;background:#fff;box-shadow:none}
-.gjb-field .input-group-btn .btn{height:38px;border-color:#e2e8f0;background:#fff;color:#334155;border-radius:0 8px 8px 0;padding:0 14px}
-.gjb-field .input-group-btn .btn + .btn{margin-left:-1px}
+.gjb-row{display:flex;align-items:stretch;width:100%;min-width:0;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;overflow:hidden}
+.gjb-row:focus-within{border-color:#94a3b8;background:#fff;box-shadow:0 0 0 3px rgba(148,163,184,.18)}
+.gjb-row input{flex:1 1 auto;min-width:0;width:auto!important;height:38px;min-height:38px!important;margin:0;padding:0 12px;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#334155;font-size:13px;outline:0}
+.gjb-row .gjb-btns{display:flex;flex:0 0 auto;align-items:stretch;border-left:1px solid #e2e8f0}
+.gjb-row .gjb-btns button{height:auto;min-height:38px;min-width:52px;margin:0;padding:0 12px;border:0!important;border-radius:0!important;background:#fff!important;color:#475569!important;font-size:12px;font-weight:600;box-shadow:none!important}
+.gjb-row .gjb-btns button:hover{background:#f1f5f9!important;color:#0f172a!important}
+.gjb-row .gjb-btns button + button{border-left:1px solid #e2e8f0!important}
+.gjb-row .gjb-btns .gjb-reset{color:#c2410c!important}
+.gjb-row .gjb-btns .gjb-reset:hover{background:#fff7ed!important}
 .gjb-field .help{display:block;margin-top:5px;font-size:11px;color:#94a3b8;line-height:1.5}
 .gjb-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 20px;background:#f8fafc;border-bottom:1px solid #f1f5f9}
 .gjb-toolbar label{margin:0;font-size:12px;font-weight:600;color:#475569}
-.gjb-toolbar .input-group{width:140px}
-.gjb-toolbar .form-control{height:34px;box-shadow:none;border-color:#e2e8f0;font-size:13px}
-.gjb-toolbar .input-group-addon{background:#fff;border-color:#e2e8f0;color:#64748b;font-size:12px}
+.gjb-money{display:inline-flex;align-items:center;width:128px;height:36px;padding:0 10px;border:1px solid #e2e8f0;border-radius:10px;background:#fff}
+.gjb-money:focus-within{border-color:#94a3b8;box-shadow:0 0 0 3px rgba(148,163,184,.18)}
+.gjb-money span{flex:0 0 auto;margin-right:4px;color:#64748b;font-size:13px;font-weight:600;line-height:1}
+.gjb-money input{flex:1 1 auto;min-width:0;width:auto!important;height:34px;min-height:34px!important;margin:0;padding:0;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:#0f172a;font-size:13px;outline:0}
 .gjb-toolbar .hint{font-size:12px;color:#94a3b8}
 .gjb-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:16px 20px 20px}
 .gjb-ch{border:1px solid #e2e8f0;border-radius:14px;padding:16px;background:#fff;display:flex;flex-direction:column;gap:14px;transition:border-color .15s,box-shadow .15s}
@@ -97,30 +102,31 @@ foreach($channels as $channel){
 .gjb-qr-box img{width:100%;height:100%;object-fit:cover}
 .gjb-qr-box .empty{font-size:12px;color:#94a3b8}
 .gjb-ch-tip{flex:1;min-width:0;font-size:12px;line-height:1.65;color:#64748b}
-.gjb-ch-actions{display:flex;flex-wrap:wrap;gap:6px;padding-top:2px;border-top:1px solid #f1f5f9}
-.gjb-ch-actions .btn{border-radius:8px;padding:6px 10px;font-size:12px;line-height:1.2}
-.gjb-ch-actions .btn-info{background:#eff6ff;border-color:#bfdbfe;color:#2563eb}
-.gjb-ch-actions .btn-warning{background:#fff7ed;border-color:#fed7aa;color:#c2410c}
-.gjb-ch-actions .btn-success{background:#ecfdf5;border-color:#bbf7d0;color:#15803d}
-.gjb-ch-actions .btn-primary{background:#0f172a;border-color:#0f172a;color:#fff}
-.gjb-ch-actions .btn-default{background:#fff;border-color:#e2e8f0;color:#475569}
+.gjb-ch-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:12px;border-top:1px solid #f1f5f9}
+.gjb-ch-actions .gjb-act{display:inline-flex;min-height:34px;align-items:center;justify-content:center;margin:0;padding:6px 10px;border-radius:9px!important;border:1px solid #e2e8f0!important;background:#fff!important;color:#475569!important;font-size:12px;font-weight:600;line-height:1.2;cursor:pointer;box-shadow:none!important}
+.gjb-ch-actions .gjb-act:hover{background:#f8fafc!important;border-color:#cbd5e1!important;color:#0f172a!important}
+.gjb-ch-actions .gjb-act.primary{background:#0f172a!important;border-color:#0f172a!important;color:#fff!important}
+.gjb-ch-actions .gjb-act.primary:hover{background:#1e293b!important;border-color:#1e293b!important;color:#fff!important}
+.gjb-ch-actions .gjb-act.warn{color:#c2410c!important;border-color:#fed7aa!important;background:#fff7ed!important}
+.gjb-ch-actions .gjb-act.warn:hover{background:#ffedd5!important}
+.gjb-ch-actions .gjb-act.ok{color:#15803d!important;border-color:#bbf7d0!important;background:#ecfdf5!important}
 .gjb-upload-button{margin:0;cursor:pointer}
 .gjb-upload-button.disabled{opacity:.6;pointer-events:none}
 @media(max-width:860px){
   .gjb-hero{flex-direction:column}
   .gjb-monitor,.gjb-main{grid-template-columns:1fr}
-  .gjb-aside{border-right:0;border-bottom:1px solid #f1f5f9}
+  .gjb-aside{border-right:0;border-bottom:1px solid #f1f5f9;border-radius:0}
   .gjb-scan{display:flex;align-items:center;gap:14px;text-align:left}
   .gjb-scan p{margin:0}
   .gjb-grid{grid-template-columns:1fr}
 }
 @media(max-width:520px){
-  .gjb-page{padding:16px 14px 36px}
+  .gjb-page{padding:4px 0 24px}
   .gjb-stats{width:100%}
   .gjb-stat{flex:1}
   .gjb-scan{display:block;text-align:center}
   .gjb-scan p{margin-top:10px}
-  .gjb-ch-actions .btn{flex:1;text-align:center}
+  .gjb-ch-actions{grid-template-columns:1fr 1fr}
 }
 </style>
 <div id="content" class="app-content" role="main">
@@ -149,7 +155,7 @@ foreach($channels as $channel){
             <div class="gjb-live"><i class="gjb-dot"></i><?php echo $online ? '在线' : '离线'?></div>
             <div class="gjb-meta">最后心跳<strong><?php echo h($lastHeart)?></strong></div>
             <div class="gjb-meta">最近推送<strong title="<?php echo h($lastPush)?>"><?php echo h($lastPush)?></strong></div>
-            <a href="softdown.php" class="btn btn-success btn-sm">下载监控 APP</a>
+            <a href="softdown.php" class="gjb-dl">下载监控 APP</a>
           </aside>
           <div class="gjb-main">
             <div class="gjb-scan">
@@ -159,27 +165,27 @@ foreach($channels as $channel){
             <div class="gjb-fields">
               <div class="gjb-field">
                 <label for="gjb-cfg">配置数据</label>
-                <div class="input-group">
-                  <input class="form-control" type="text" id="gjb-cfg" value="<?php echo h($configData)?>" readonly>
-                  <span class="input-group-btn"><button class="btn btn-default" type="button" onclick="copyText('gjb-cfg')">复制</button></span>
+                <div class="gjb-row">
+                  <input type="text" id="gjb-cfg" value="<?php echo h($configData)?>" readonly>
+                  <div class="gjb-btns"><button type="button" onclick="copyText('gjb-cfg')">复制</button></div>
                 </div>
                 <span class="help">APP「手动配置」整串粘贴</span>
               </div>
               <div class="gjb-field">
                 <label for="gjb-url">监控地址</label>
-                <div class="input-group">
-                  <input class="form-control" type="text" id="gjb-url" value="<?php echo h($monitor)?>" readonly>
-                  <span class="input-group-btn"><button class="btn btn-default" type="button" onclick="copyText('gjb-url')">复制</button></span>
+                <div class="gjb-row">
+                  <input type="text" id="gjb-url" value="<?php echo h($monitor)?>" readonly>
+                  <div class="gjb-btns"><button type="button" onclick="copyText('gjb-url')">复制</button></div>
                 </div>
               </div>
               <div class="gjb-field">
                 <label for="gjb-key">通讯密钥</label>
-                <div class="input-group">
-                  <input class="form-control" type="text" id="gjb-key" value="<?php echo h($row['gjb_key'])?>" readonly>
-                  <span class="input-group-btn">
-                    <button class="btn btn-default" type="button" onclick="copyText('gjb-key')">复制</button>
-                    <button class="btn btn-warning" type="button" onclick="resetKey()">重置</button>
-                  </span>
+                <div class="gjb-row">
+                  <input type="text" id="gjb-key" value="<?php echo h($row['gjb_key'])?>" readonly>
+                  <div class="gjb-btns">
+                    <button type="button" onclick="copyText('gjb-key')">复制</button>
+                    <button type="button" class="gjb-reset" onclick="resetKey()">重置</button>
+                  </div>
                 </div>
                 <span class="help">仅监控 APP 使用；重置后需重新扫码</span>
               </div>
@@ -195,9 +201,9 @@ foreach($channels as $channel){
         </div>
         <div class="gjb-toolbar">
           <label for="gjb-test-money">测试金额</label>
-          <div class="input-group">
-            <span class="input-group-addon">¥</span>
-            <input class="form-control" type="number" id="gjb-test-money" value="0.01" min="0.01" step="0.01">
+          <div class="gjb-money">
+            <span>¥</span>
+            <input type="number" id="gjb-test-money" value="0.01" min="0.01" step="0.01">
           </div>
           <span class="hint">「测试订单 / 模拟推送」共用此金额</span>
         </div>
@@ -225,13 +231,13 @@ foreach($channels as $channel){
               <div class="gjb-ch-tip"><?php echo h($ch['tip'])?></div>
             </div>
             <div class="gjb-ch-actions">
-              <label class="btn btn-info gjb-upload-button" data-label="<?php echo $ready ? '重新上传' : '上传收款码'?>">
+              <label class="gjb-act primary gjb-upload-button" data-label="<?php echo $ready ? '重新上传' : '上传收款码'?>">
                 <span><?php echo $ready ? '重新上传' : '上传收款码'?></span>
                 <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-field="<?php echo $ch['qr']?>" class="gjb-file" style="display:none">
               </label>
-              <button type="button" class="btn btn-<?php echo $on?'warning':'success'?>" onclick="toggleCh('<?php echo $ch['type']?>',<?php echo $on?0:1?>)"><?php echo $on?'关闭通道':'开启通道'?></button>
-              <button type="button" class="btn btn-primary" onclick="testOrder('<?php echo $ch['type']?>')">测试订单</button>
-              <button type="button" class="btn btn-default" onclick="simulatePush('<?php echo $ch['type']?>')">模拟推送</button>
+              <button type="button" class="gjb-act <?php echo $on?'warn':'ok'?>" onclick="toggleCh('<?php echo $ch['type']?>',<?php echo $on?0:1?>)"><?php echo $on?'关闭通道':'开启通道'?></button>
+              <button type="button" class="gjb-act primary" onclick="testOrder('<?php echo $ch['type']?>')">测试订单</button>
+              <button type="button" class="gjb-act" onclick="simulatePush('<?php echo $ch['type']?>')">模拟推送</button>
             </div>
           </article>
 <?php } ?>

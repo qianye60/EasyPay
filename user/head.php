@@ -33,6 +33,13 @@ if($epay_ui_view){
 		'qqqun' => $conf['qqqun'] ?? '',
 		'appurl' => $conf['appurl'] ?? '',
 	], isset($epay_ui_config['features']) && is_array($epay_ui_config['features']) ? $epay_ui_config['features'] : []);
+	if(isset($userrow) && is_array($userrow)){
+		$epay_ui_config['user'] = [
+			'uid' => $userrow['uid'] ?? '',
+			'username' => !empty($userrow['username']) ? $userrow['username'] : ($userrow['account'] ?? ''),
+			'account' => $userrow['account'] ?? '',
+		];
+	}
 }
 if($epay_ui_view && !isset($epay_ui_config['title'])) $epay_ui_config['title'] = isset($title) ? $title : '商户管理';
 if($epay_ui_view && !isset($epay_ui_config['sitename'])) $epay_ui_config['sitename'] = $conf['sitename'];

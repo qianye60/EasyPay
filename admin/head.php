@@ -6,6 +6,10 @@ $admin_csrf_token = $_SESSION['admin_csrf_token'];
 $epay_ui_view = isset($epay_ui_view) ? (string)$epay_ui_view : 'admin-dashboard';
 $epay_ui_config = isset($epay_ui_config) && is_array($epay_ui_config) ? $epay_ui_config : [];
 $epay_ui_config['csrf_token'] = $admin_csrf_token;
+$epay_ui_config['user'] = [
+	'username' => '超级管理员',
+	'role' => 'admin',
+];
 if(!isset($epay_ui_config['title'])) $epay_ui_config['title'] = isset($title) ? $title : '平台运营';
 if(!isset($epay_ui_config['sitename'])) $epay_ui_config['sitename'] = $conf['sitename'] ?? 'Rainbow Pay';
 $epay_ui_config['features'] = array_merge([
