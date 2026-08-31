@@ -300,11 +300,6 @@ export function QrCheckoutView({
               )}
             </div>
 
-            <p className="text-center text-xs text-muted-foreground">
-              二维码由收款内容重新生成，不是商户上传的原图
-              {config.merchantName ? ` · ${config.merchantName}` : ""}
-            </p>
-
             {mobile && codeUrl && !expired && (
               <div className="grid w-full gap-2">
                 {type === "alipay" && !isWeChat() ? (
