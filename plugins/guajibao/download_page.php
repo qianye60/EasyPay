@@ -13,15 +13,14 @@ include '/var/www/html/user/head.php';
       <div class="panel panel-default">
         <div class="panel-heading"><h4 class="panel-title">监控端（安卓）</h4></div>
         <div class="panel-body">
-          <p>收款确认靠手机通知栏。本站不托管第三方商业「挂机宝」安装包。协议兼容开源 <strong>V免签监控端</strong>：</p>
+          <p>收款确认靠手机通知栏。请安装本站修复版监控端（基于开源 V免签，已兼容新版支付宝通知）：</p>
           <p>
-            <a class="btn btn-success" href="https://github.com/szvone/vmqApk/releases/download/v1.8.1/app-release.apk">下载 APK</a>
-            <a class="btn btn-default" href="https://github.com/szvone/vmqApk/releases" target="_blank" rel="noopener">GitHub 发布页</a>
+            <a class="btn btn-success" href="/assets/apk/vmq-epay.apk">下载修复版 APK</a>
+            <a class="btn btn-default" href="https://github.com/szvone/vmqApk" target="_blank" rel="noopener">上游源码</a>
           </p>
           <p>安装后打开 APP 点「扫码配置」，去 <a href="channel.php">通道管理</a> 扫页面上的配置二维码。也可以点「手动配置」，把「配置数据」整串贴进去。然后开启通知使用权。</p>
-          <p class="text-muted">官方这款只稳定监听微信、支付宝。QQ 通道要用能推 QQ 到账通知的挂机宝。</p>
-          <p><strong>支付宝注意（官方 APP 源码）：</strong>只有通知内容包含「通过扫码向你付款」或「成功收款」才会推送 type=2。文案变了、金额只在标题、或没弹出通知栏，APP 都不会推。通道页可用「模拟推送」先验证网站侧。</p>
-          <p>要能自动回调：手机开通知使用权、关掉电池优化、微信关注「微信收款助手」并打开收款提醒；监控 APP 不要被杀掉。付款必须进<strong>这台手机上登录的微信/支付宝</strong>，否则 APP 收不到通知，订单不会变已支付。</p>
+          <p class="text-muted">官方旧包只扫通知<strong>内容</strong>里的「成功收款」；新版支付宝把「你已成功收款0.01元」放在<strong>标题</strong>，内容是广告，所以旧包推不出去。本站修复版会同时读标题和内容。</p>
+          <p>要能自动回调：手机开通知使用权、关掉电池优化、微信关注「微信收款助手」并打开收款提醒；监控 APP 不要被杀掉。付款必须进<strong>这台手机上登录的微信/支付宝</strong>，否则 APP 收不到通知，订单不会变已支付。若已装官方旧包，请先卸载再装本修复版（包名相同会覆盖）。</p>
         </div>
       </div>
     </div>
