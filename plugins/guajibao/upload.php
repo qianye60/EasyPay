@@ -52,7 +52,7 @@ if($act === 'simulatePush'){
 	global $siteurl;
 	$type = trim($_POST['type'] ?? '');
 	$money = trim($_POST['money'] ?? '0.01');
-	$vmqType = ['wxpay'=>1,'alipay'=>2,'qqpay'=>4][$type] ?? 0;
+	$vmqType = ['wxpay'=>1,'alipay'=>2][$type] ?? 0;
 	if(!$vmqType) exit('{"code":-1,"msg":"通道不存在"}');
 	if($money === '' || !is_numeric($money) || $money <= 0 || !preg_match('/^[0-9]+(\.[0-9]{1,2})?$/', $money)) exit('{"code":-1,"msg":"金额不合法"}');
 	$money = sprintf('%.2f', round((float)$money, 2));
@@ -70,7 +70,7 @@ if($act === 'simulatePush'){
 }
 
 $field = trim($_POST['field'] ?? '');
-if(!in_array($field, ['wx_qr','ali_qr','qq_qr'], true)) exit('{"code":-1,"msg":"类型错误"}');
+if(!in_array($field, ['wx_qr','ali_qr'], true)) exit('{"code":-1,"msg":"类型错误"}');
 if(empty($_FILES['file']) || !is_uploaded_file($_FILES['file']['tmp_name'])) exit('{"code":-1,"msg":"请选择图片"}');
 if($_FILES['file']['size'] > 2*1024*1024) exit('{"code":-1,"msg":"图片不能超过2MB"}');
 $info = @getimagesize($_FILES['file']['tmp_name']);
@@ -85,7 +85,7 @@ $dest = $dir.'/'.$name;
 $tmp = $dest.'.upload.'.bin2hex(random_bytes(6));
 if(!move_uploaded_file($_FILES['file']['tmp_name'], $tmp)) exit('{"code":-1,"msg":"保存失败"}');
 $rel = $dirRel.'/'.$name;
-$typename = $field === 'wx_qr' ? 'wxpay' : ($field === 'ali_qr' ? 'alipay' : 'qqpay');
+$typename = $field === 'wx_qr' ? 'wxpay' : 'alipay';
 $payload = GuajiHelper::decodeQrFile($tmp);
 if(!$payload){
 	@unlink($tmp);

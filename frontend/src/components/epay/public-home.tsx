@@ -268,10 +268,6 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
                       <span className="size-2 rounded-full bg-primary" />
                       微信支付
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="size-2 rounded-full bg-primary" />
-                      QQ 钱包
-                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-2xl bg-muted/50 p-4">
@@ -337,11 +333,9 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
                 让用户用熟悉的方式完成付款，让商户用统一的方式经营每一笔订单。
               </p>
             </div>
-            <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="mt-10 grid grid-cols-2 gap-3 sm:grid-cols-2">
               <Partner name="支付宝" src="/assets/icon/alipay.ico" />
               <Partner name="微信支付" src="/assets/icon/wxpay.ico" />
-              <Partner name="QQ 钱包" src="/assets/icon/qqpay.ico" />
-              <Partner name="财付通" src="/assets/icon/tenpay.ico" />
             </div>
           </div>
         </section>

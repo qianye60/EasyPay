@@ -15,7 +15,6 @@ $lastPush = !empty($row['last_push']) ? $row['last_push'].' '.($row['last_push_n
 $channels = [
 	['type'=>'wxpay', 'qr'=>'wx_qr', 'on'=>'wx_on', 'name'=>'微信支付', 'note'=>'上传清晰的微信收款码。系统会解析出码内容并重新生成点位图，不会直接展示原图。'],
 	['type'=>'alipay', 'qr'=>'ali_qr', 'on'=>'ali_on', 'name'=>'支付宝', 'note'=>'上传清晰的支付宝收款码。请安装本站「软件下载」里的修复版监控端：新版支付宝把「成功收款」放在标题，官方旧包只扫内容会漏推。'],
-	['type'=>'qqpay', 'qr'=>'qq_qr', 'on'=>'qq_on', 'name'=>'QQ钱包', 'note'=>'上传清晰的 QQ 收款码。官方 V免签 APP 不听 QQ 通知，需挂机宝等能推 QQ 到账的监控端。'],
 ];
 $uploadedCount = 0;
 $activeCount = 0;

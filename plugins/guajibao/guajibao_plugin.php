@@ -7,7 +7,7 @@ class guajibao_plugin
 		'showname'    => '挂机宝个人收款',
 		'author'      => 'EasyPay',
 		'link'        => '',
-		'types'       => ['alipay','qqpay','wxpay'],
+		'types'       => ['alipay','wxpay'],
 		'inputs'      => [
 			'appurl' => [
 				'name' => '说明',
@@ -16,7 +16,7 @@ class guajibao_plugin
 			],
 		],
 		'select'      => null,
-		'note'        => '多商户免签：每个商户自己上传微信/支付宝/QQ收款码，下载挂机宝填监控地址。钱直接进该商户的微信/支付宝/QQ，不经过平台钱包。',
+		'note'        => '多商户免签：每个商户自己上传微信/支付宝收款码，下载监控端填监控地址。钱直接进该商户的微信/支付宝，不经过平台钱包。QQ 通道暂未开放。',
 		'bindwxmp'    => false,
 		'bindwxa'     => false,
 	];

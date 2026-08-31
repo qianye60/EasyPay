@@ -37,7 +37,7 @@ class GuajiHelper {
 		$uid = intval($uid);
 		$row = $DB->getRow("SELECT * FROM pre_guaji WHERE uid=:uid LIMIT 1", [':uid'=>$uid]);
 		if(!$row){
-			$DB->insert('guaji', ['uid'=>$uid, 'gjb_key'=>self::newKey(), 'wx_on'=>1, 'ali_on'=>1, 'qq_on'=>1]);
+			$DB->insert('guaji', ['uid'=>$uid, 'gjb_key'=>self::newKey(), 'wx_on'=>1, 'ali_on'=>1, 'qq_on'=>0]);
 			$row = $DB->getRow("SELECT * FROM pre_guaji WHERE uid=:uid LIMIT 1", [':uid'=>$uid]);
 		}
 		if(empty($row['gjb_key'])){
@@ -100,6 +100,7 @@ class GuajiHelper {
 	}
 
 	static public function channelOn($uid, $typename){
+		if($typename === 'qqpay') return false; // QQ 暂未开放
 		$field = self::onField($typename);
 		if(!$field) return false;
 		$row = self::get($uid);
@@ -108,6 +109,7 @@ class GuajiHelper {
 
 	static public function setOn($uid, $typename, $on){
 		global $DB;
+		if($typename === 'qqpay') return false; // QQ 暂未开放
 		$field = self::onField($typename);
 		if(!$field) return false;
 		self::get($uid);
@@ -117,7 +119,7 @@ class GuajiHelper {
 	static public function saveQr($uid, $field, $path){
 		global $DB;
 		self::get($uid);
-		if(!in_array($field, ['wx_qr','ali_qr','qq_qr'], true)) return false;
+		if(!in_array($field, ['wx_qr','ali_qr'], true)) return false;
 		return $DB->update('guaji', [$field=>$path], ['uid'=>intval($uid)]) !== false;
 	}
 
