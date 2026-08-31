@@ -31,6 +31,7 @@ export type QrCheckoutConfig = {
   title?: string
   sitename?: string
   codeUrl?: string
+  imageUrl?: string
   amount?: string | number
   tradeNo?: string
   productName?: string
@@ -131,6 +132,7 @@ export function QrCheckoutView({
   const meta = payMeta[type] ?? payMeta.wxpay
   const amount = formatAmount(config.amount)
   const codeUrl = String(config.codeUrl ?? "")
+  const imageUrl = String(config.imageUrl ?? "")
   const expireAt = Number(config.expireAt ?? 0)
   const siteName = config.sitename || "Rainbow Pay"
   const [remain, setRemain] = React.useState(() =>
@@ -277,7 +279,15 @@ export function QrCheckoutView({
 
             <div className="relative rounded-3xl border bg-background p-4 shadow-sm">
               {codeUrl && !expired ? (
-                <QrDotMap value={codeUrl} size={220} />
+                imageUrl ? (
+                  <img
+                    src={imageUrl}
+                    alt={`${meta.label}二维码`}
+                    className="size-[220px] object-contain"
+                  />
+                ) : (
+                  <QrDotMap value={codeUrl} size={220} />
+                )
               ) : (
                 <div className="flex size-[220px] items-center justify-center text-sm text-muted-foreground">
                   {expired ? "二维码已失效" : "二维码加载失败"}

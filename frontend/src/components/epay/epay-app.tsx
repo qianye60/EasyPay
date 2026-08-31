@@ -2315,7 +2315,7 @@ function CashierView({ config }: { config?: CashierConfig }) {
             <div className="mt-5 flex flex-col items-stretch gap-3 rounded-2xl border bg-background p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <p className="flex items-center gap-2 text-xs text-muted-foreground">
                 <ShieldCheck className="size-4 text-primary" />
-                请按提示金额原样支付，避免无法到账
+                请按提示金额原样支付
               </p>
               <div className="flex items-center gap-4">
                 <span className="text-sm text-muted-foreground">
