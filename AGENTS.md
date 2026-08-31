@@ -1,5 +1,7 @@
 # PROJECT KNOWLEDGE BASE
 
+运维、服务器、发版、Azure：**先读 [OPS.md](OPS.md)**。本文件只讲代码结构。
+
 **Generated:** 2026-04-30
 **Commit:** 413e629
 **Branch:** main

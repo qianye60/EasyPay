@@ -1,5 +1,6 @@
 /.env
 /config.php
+/.local-ops.md
 /install/install.lock
 cache/
 *.log
