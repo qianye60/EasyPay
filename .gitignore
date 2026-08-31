@@ -4,6 +4,9 @@
 /.local-setup/
 /install/install.lock
 /plugins/guajibao/static/
+/docker/ssl/
+/_ssl_worldloom/
+/_.worldloom.top*.zip
 cache/
 *.log
 lakala_log.txt
