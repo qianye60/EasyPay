@@ -734,7 +734,7 @@ function processOrder(&$srow,$notify=true){
 	}else if($srow['tid']==2){ //充值余额
 		$param = json_decode($srow['param'], true);
 		changeUserMoney($param['uid'], $addmoney, true, '余额充值', $srow['trade_no']);
-	}else if($srow['tid']==3){ //聚合收款码
+	}else if($srow['tid']==3){ //聚合收款码 / 通道测试
 		if($channel['mode']==1){
 			if($reducemoney>0)
 				changeUserMoney($srow['uid'], $reducemoney, false, '在线收款服务费', $srow['trade_no']);
@@ -748,6 +748,15 @@ function processOrder(&$srow,$notify=true){
 				$params = ['pid'=>$srow['uid'], 'trade_no'=>$srow['trade_no'], 'money'=>$srow['realmoney'], 'key'=>md5(SYS_KEY.$srow['uid'].$srow['trade_no'].SYS_KEY)];
 				get_curl($conf['localurl'].'api.php?act=refundapi', http_build_query($params));
 				return;
+			}
+		}
+		// 与普通订单一致：有 notify_url 时必须异步回调商户
+		if(!empty($srow['notify_url'])){
+			$url=creat_callback($srow);
+			if(do_notify($url['notify'])){
+				$DB->exec("UPDATE pre_order SET notify=0 WHERE trade_no='{$srow['trade_no']}'");
+			}elseif($notify==true){
+				$DB->exec("UPDATE pre_order SET notify=1,notifytime=date_add(now(), interval 1 minute) WHERE trade_no='{$srow['trade_no']}'");
 			}
 		}
 	}else if($srow['tid']==4){ //购买用户组

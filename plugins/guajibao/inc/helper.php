@@ -4,7 +4,8 @@ class GuajiHelper {
 	const TYPE_ALI = 2;
 	const TYPE_QQ = 4;
 
-	const PAY_EXPIRE = 600;
+	// 订单匹配窗口（秒）。收银台倒计时可更短，匹配需覆盖付款延迟。
+	const PAY_EXPIRE = 1800;
 
 	static public function ensureTable(){
 		global $DB;
