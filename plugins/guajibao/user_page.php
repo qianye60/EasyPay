@@ -40,9 +40,7 @@ foreach($channels as $channel){
 <style>
 .gjb-page{max-width:1080px;margin:0 auto;padding:8px 4px 32px;color:#0f172a}
 .gjb-page *{box-sizing:border-box}
-.gjb-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:18px}
-.gjb-hero h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em}
-.gjb-hero p{margin:6px 0 0;color:#64748b;font-size:13px;line-height:1.5}
+.gjb-hero{display:flex;align-items:flex-start;justify-content:flex-end;gap:20px;margin-bottom:18px}
 .gjb-stats{display:flex;gap:8px;flex-shrink:0}
 .gjb-stat{min-width:84px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #e2e8f0}
 .gjb-stat b{display:block;font-size:18px;line-height:1.1}
@@ -135,10 +133,6 @@ foreach($channels as $channel){
       <input type="hidden" id="csrf_token" value="<?php echo $csrf_token?>">
 
       <div class="gjb-hero">
-        <div>
-          <h1>通道管理</h1>
-          <p>连接监控端，上传微信 / 支付宝收款码，到账后自动回调订单。</p>
-        </div>
         <div class="gjb-stats">
           <div class="gjb-stat"><b><?php echo $activeCount?>/<?php echo count($channels)?></b><span>已开启</span></div>
           <div class="gjb-stat"><b><?php echo $uploadedCount?>/<?php echo count($channels)?></b><span>已上传码</span></div>

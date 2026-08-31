@@ -20,9 +20,6 @@ include './head.php';
 </div>
 <?php }?>
 	<div class="panel panel-default">
-		<div class="panel-heading font-bold">
-			结算记录
-		</div>
 		<form onsubmit="return searchSubmit()" method="GET" class="form-inline" id="searchToolbar">
 			<div class="form-group">
 				<select name="dstatus" class="form-control"><option value="-1">全部状态</option><option value="0">状态待结算</option><option value="1">状态已完成</option><option value="2">状态正在结算</option><option value="3">状态结算失败</option></select>

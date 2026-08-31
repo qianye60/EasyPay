@@ -1079,3 +1079,220 @@ body:has(#epay-react-root) {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* 商户遗留页：去掉双重卡片、重复标题，统一列表/表单观感 */
+#epay-react-legacy-slot.epay-legacy-workspace-surface {
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface > .panel,
+#epay-react-legacy-slot.epay-legacy-workspace-surface .panel.panel-default {
+  overflow: hidden;
+  border: 1px solid var(--border) !important;
+  border-radius: 1rem !important;
+  background: var(--card) !important;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%) !important;
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface .panel > .panel-heading {
+  display: none !important;
+}
+
+#epay-react-legacy-slot #searchToolbar {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.7rem;
+  margin: 0 !important;
+  padding: 1rem 1.1rem !important;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in oklch, var(--muted) 40%, transparent) !important;
+}
+
+#epay-react-legacy-slot #searchToolbar .form-control,
+#epay-react-legacy-slot #searchToolbar select.form-control {
+  min-height: 2.35rem !important;
+  border-radius: 0.7rem !important;
+  font-size: 0.8125rem !important;
+}
+
+#epay-react-legacy-slot #searchToolbar .btn {
+  min-height: 2.35rem !important;
+  border-radius: 0.7rem !important;
+  padding-inline: 0.9rem !important;
+  font-size: 0.8125rem !important;
+  font-weight: 600;
+}
+
+#epay-react-legacy-slot .input-daterange {
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch;
+  gap: 0 !important;
+  width: auto !important;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border) !important;
+  border-radius: 0.7rem !important;
+  background: var(--background) !important;
+}
+
+#epay-react-legacy-slot .input-daterange > .form-control,
+#epay-react-legacy-slot .input-daterange > .dates {
+  width: 7.25rem !important;
+  min-width: 7.25rem !important;
+  min-height: 2.35rem !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+#epay-react-legacy-slot .input-daterange > .input-group-addon {
+  display: inline-flex !important;
+  min-width: 2rem;
+  min-height: 2.35rem;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  border: 0 !important;
+  border-left: 1px solid var(--border) !important;
+  border-right: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  background: color-mix(in oklch, var(--muted) 55%, transparent) !important;
+  color: var(--muted-foreground) !important;
+  cursor: pointer;
+}
+
+#epay-react-legacy-slot .fixed-table-toolbar,
+#epay-react-legacy-slot .fixed-table-pagination {
+  padding: 0.85rem 1.1rem !important;
+  background: transparent !important;
+}
+
+#epay-react-legacy-slot .fixed-table-container,
+#epay-react-legacy-slot .fixed-table-body {
+  border-color: var(--border) !important;
+}
+
+#epay-react-legacy-slot .bootstrap-table .table,
+#epay-react-legacy-slot .fixed-table-container .table {
+  margin-bottom: 0 !important;
+}
+
+#epay-react-legacy-slot .bootstrap-table .table > thead > tr > th,
+#epay-react-legacy-slot .fixed-table-container .table > thead > tr > th {
+  white-space: nowrap;
+  font-size: 0.75rem !important;
+}
+
+#epay-react-legacy-slot .bootstrap-table .table > tbody > tr > td,
+#epay-react-legacy-slot .fixed-table-container .table > tbody > tr > td {
+  font-size: 0.8125rem !important;
+}
+
+#epay-react-legacy-slot .pagination {
+  display: inline-flex !important;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0 !important;
+}
+
+#epay-react-legacy-slot .pagination > li > a,
+#epay-react-legacy-slot .pagination > li > span {
+  display: inline-flex !important;
+  min-width: 2rem;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  border-radius: 0.55rem !important;
+  font-size: 0.75rem !important;
+}
+
+#epay-react-legacy-slot .page-list .btn-group .btn,
+#epay-react-legacy-slot .fixed-table-pagination .btn {
+  min-height: 2rem !important;
+  border-radius: 0.55rem !important;
+  font-size: 0.75rem !important;
+}
+
+#epay-react-legacy-slot .panel-body {
+  padding: 1.15rem 1.2rem 1.35rem !important;
+}
+
+#epay-react-legacy-slot .panel-footer {
+  padding: 1rem 1.2rem 1.25rem !important;
+  background: color-mix(in oklch, var(--muted) 35%, transparent) !important;
+  color: var(--muted-foreground) !important;
+  font-size: 0.8125rem;
+  line-height: 1.7;
+}
+
+#epay-react-legacy-slot .panel-footer h4 {
+  margin: 0 0 0.5rem !important;
+  font-size: 0.875rem !important;
+  color: var(--foreground) !important;
+}
+
+#epay-react-legacy-slot .form-horizontal {
+  max-width: 40rem;
+}
+
+#epay-react-legacy-slot .row > .center-block,
+#epay-react-legacy-slot .center-block {
+  float: none !important;
+  width: 100% !important;
+  max-width: 34rem !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+#epay-react-legacy-slot .form-horizontal .input-group {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 0 !important;
+  overflow: hidden;
+  border: 1px solid var(--border) !important;
+  border-radius: 0.75rem !important;
+  background: var(--background) !important;
+}
+
+#epay-react-legacy-slot .form-horizontal .input-group .form-control {
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+#epay-react-legacy-slot .form-horizontal .input-group .input-group-addon,
+#epay-react-legacy-slot .form-horizontal .input-group > a.input-group-addon {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  margin: 0 !important;
+  padding: 0 0.9rem !important;
+  border: 0 !important;
+  border-left: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  background: color-mix(in oklch, var(--muted) 55%, transparent) !important;
+  color: var(--foreground) !important;
+  text-decoration: none !important;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+#epay-react-legacy-slot .alert {
+  margin-bottom: 0.9rem !important;
+  border-radius: 0.9rem !important;
+}
+
+#epay-react-legacy-slot .radio label,
+#epay-react-legacy-slot .i-checks {
+  margin-right: 0.85rem;
+  font-weight: 500;
+}
+

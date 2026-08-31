@@ -138,9 +138,6 @@ if(isset($_GET['act']) && $_GET['act']=='do'){
 </div>
 <?php }?>
 	<div class="panel panel-default">
-		<div class="panel-heading font-bold">
-			申请提现
-		</div>
 		<div class="panel-body">
 			<form class="form-horizontal devform" action="./apply.php?act=do" method="post">
 				<input type="hidden" name="csrf_token" value="<?php echo $csrf_token?>">

@@ -33,11 +33,7 @@ unset($rs);
 	<?php echo $msg?>
 </div>
 <?php }?>
-	<div class="panel panel-default">
-		<div class="panel-heading font-bold">
-			<h3 class="panel-title">订单记录</h3>
-		</div>
-
+<div class="panel panel-default">
 	    <form onsubmit="return searchSubmit()" method="GET" class="form-inline" id="searchToolbar">
 		<input type="hidden" name="channel" value="">
 		<input type="hidden" name="subchannel" value="">

@@ -37,9 +37,6 @@ $_SESSION['csrf_token'] = $csrf_token;
 		<p>充值的余额仅限用于平台消费或订单退款资金，严禁频繁大额充值后提现，否则封禁商户并冻结余额！</p>
 	</div>
 	<div class="panel panel-default">
-		<div class="panel-heading font-bold">
-			<i class="fa fa-cny"></i>&nbsp;余额充值
-		</div>
 		<div class="panel-body">
 			<form class="form-horizontal devform">
 			<input type="hidden" name="csrf_token" value="<?php echo $csrf_token?>">

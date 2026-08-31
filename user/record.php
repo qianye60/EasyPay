@@ -20,9 +20,6 @@ include './head.php';
 </div>
 <?php }?>
 	<div class="panel panel-default">
-		<div class="panel-heading font-bold">
-			<h3 class="panel-title">资金明细</h3>
-		</div>
 	    <form onsubmit="return searchSubmit()" method="GET" class="form-inline" id="searchToolbar">
 	      <div class="form-group">
 			<select class="form-control" name="type">

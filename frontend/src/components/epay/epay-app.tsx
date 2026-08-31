@@ -496,20 +496,35 @@ function Brand({
   compact = false,
   name = "Rainbow Pay",
   subtitle = "商户自收款",
+  role,
 }: {
   compact?: boolean
   name?: string
   subtitle?: string
+  role?: string
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3">
-      <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-sm ring-1 ring-primary/20">
-        <CircleDollarSign className="size-5" aria-hidden="true" />
+    <div className={cn("flex min-w-0 items-center", compact ? "justify-center" : "gap-3")}>
+      <div className="relative flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-primary via-primary/90 to-primary/75 text-primary-foreground shadow-sm shadow-primary/25 ring-1 ring-white/20 transition-transform duration-200 hover:scale-105">
+        <Zap className="size-4.5" aria-hidden="true" />
       </div>
       {!compact && (
-        <div className="min-w-0 leading-tight">
-          <p className="truncate font-semibold tracking-tight text-foreground text-sm">{name}</p>
-          <p className="truncate text-[11px] text-muted-foreground font-medium">{subtitle}</p>
+        <div className="min-w-0 flex-1 leading-tight">
+          <div className="flex items-center gap-1.5">
+            <span className="truncate font-bold tracking-tight text-foreground text-sm">
+              {name}
+            </span>
+            {role && (
+              <span className="inline-flex shrink-0 items-center rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary dark:bg-primary/20 border border-primary/15">
+                {role}
+              </span>
+            )}
+          </div>
+          {subtitle && (
+            <p className="mt-0.5 truncate text-[11px] font-normal text-muted-foreground/80">
+              {subtitle}
+            </p>
+          )}
         </div>
       )}
     </div>
@@ -857,7 +872,12 @@ function WorkspaceShell({
               collapsed ? "justify-center px-2" : "px-4"
             )}
           >
-            <Brand compact={collapsed} name={sitename} subtitle={subtitle} />
+            <Brand
+              compact={collapsed}
+              name={sitename}
+              subtitle={subtitle}
+              role={kind === "admin" ? "管理端" : "商户版"}
+            />
           </div>
           <PersistentNavScrollArea
             storageKey={`epay-nav-${kind}-desktop`}
@@ -1004,6 +1024,16 @@ function PageHeading({
 }
 
 function LegacyContentSlot({ className }: { className?: string } = {}) {
+  const flat = Boolean(className?.includes("epay-legacy-workspace-surface"))
+  if (flat) {
+    return (
+      <div
+        id="epay-react-legacy-slot"
+        className={cn("epay-legacy-slot min-w-0", className)}
+        aria-live="polite"
+      />
+    )
+  }
   return (
     <Card className={cn("epay-legacy-card rounded-2xl shadow-sm", className)}>
       <CardHeader className="sr-only">
@@ -1018,6 +1048,24 @@ function LegacyContentSlot({ className }: { className?: string } = {}) {
       </CardContent>
     </Card>
   )
+}
+
+const merchantPageMeta: Record<string, string> = {
+  订单记录: "查询、筛选与导出商户订单",
+  结算记录: "查看提现申请与结算进度",
+  资金明细: "余额变动与关联订单流水",
+  申请提现: "将可用余额提现到收款账户",
+  余额充值: "为账户充值，用于消费或退款",
+  通道管理: "连接监控端并管理收款码",
+  软件下载: "下载安卓监控端并完成配置",
+  聚合收款: "一个码收多种支付方式",
+  购买会员: "购买到账监听套餐",
+  个人资料: "查看与修改商户资料",
+  实名认证: "完成商户实名认证",
+  保证金管理: "查看与缴纳保证金",
+  授权支付域名: "管理支付授权域名",
+  代付管理: "发起与查询代付",
+  邀请返现: "邀请商户获得返现",
 }
 
 const documentationNav: Array<{
@@ -1636,6 +1684,187 @@ function AdminDashboard({ config }: { config?: JsonObject }) {
   )
 }
 
+function ChannelIcon({
+  name,
+  showname,
+  className,
+}: {
+  name?: string
+  showname?: string
+  className?: string
+}) {
+  const key = `${name || ""} ${showname || ""}`.toLowerCase()
+
+  if (key.includes("ali") || key.includes("支付宝")) {
+    return (
+      <div
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#1677ff]/10 border border-[#1677ff]/20 shadow-xs",
+          className
+        )}
+      >
+        <img
+          src="/assets/icon/alipay.ico"
+          alt="支付宝"
+          className="size-4.5 object-contain"
+          onError={(e) => {
+            ;(e.currentTarget as HTMLElement).style.display = "none"
+          }}
+        />
+      </div>
+    )
+  }
+  if (key.includes("wx") || key.includes("wechat") || key.includes("微信")) {
+    return (
+      <div
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#07c160]/10 border border-[#07c160]/20 shadow-xs",
+          className
+        )}
+      >
+        <img
+          src="/assets/icon/wxpay.ico"
+          alt="微信支付"
+          className="size-4.5 object-contain"
+          onError={(e) => {
+            ;(e.currentTarget as HTMLElement).style.display = "none"
+          }}
+        />
+      </div>
+    )
+  }
+  if (
+    key.includes("usdt") ||
+    key.includes("trc") ||
+    key.includes("bep") ||
+    key.includes("erc") ||
+    key.includes("polygon")
+  ) {
+    return (
+      <div
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#26A17B]/10 border border-[#26A17B]/20 text-[#26A17B] shadow-xs",
+          className
+        )}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          className="size-4.5 fill-current"
+          aria-hidden="true"
+        >
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.25 5.25v1.36c2.46.12 4.34.62 4.34 1.22s-1.88 1.1-4.34 1.22v2.36h-2.5v-2.36c-2.46-.12-4.34-.62-4.34-1.22s1.88-1.1 4.34-1.22V7.25H6.5v-2h11v2h-4.25z" />
+        </svg>
+      </div>
+    )
+  }
+  if (key.includes("bank") || key.includes("银联") || key.includes("银行") || key.includes("网银")) {
+    return (
+      <div
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 border border-rose-500/20 shadow-xs",
+          className
+        )}
+      >
+        <img
+          src="/assets/icon/bank.ico"
+          alt="银联"
+          className="size-4.5 object-contain"
+          onError={(e) => {
+            ;(e.currentTarget as HTMLElement).style.display = "none"
+          }}
+        />
+      </div>
+    )
+  }
+  if (key.includes("jd") || key.includes("京东")) {
+    return (
+      <div
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 shadow-xs",
+          className
+        )}
+      >
+        <img
+          src="/assets/icon/jdpay.ico"
+          alt="京东支付"
+          className="size-4.5 object-contain"
+          onError={(e) => {
+            ;(e.currentTarget as HTMLElement).style.display = "none"
+          }}
+        />
+      </div>
+    )
+  }
+  if (key.includes("douyin") || key.includes("抖音")) {
+    return (
+      <div
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-xl bg-pink-500/10 border border-pink-500/20 shadow-xs",
+          className
+        )}
+      >
+        <img
+          src="/assets/icon/douyinpay.ico"
+          alt="抖音支付"
+          className="size-4.5 object-contain"
+          onError={(e) => {
+            ;(e.currentTarget as HTMLElement).style.display = "none"
+          }}
+        />
+      </div>
+    )
+  }
+  if (key.includes("paypal")) {
+    return (
+      <div
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-xl bg-blue-600/10 border border-blue-600/20 shadow-xs",
+          className
+        )}
+      >
+        <img
+          src="/assets/icon/paypal.ico"
+          alt="PayPal"
+          className="size-4.5 object-contain"
+          onError={(e) => {
+            ;(e.currentTarget as HTMLElement).style.display = "none"
+          }}
+        />
+      </div>
+    )
+  }
+  if (key.includes("ecny") || key.includes("数字人民币")) {
+    return (
+      <div
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-xl bg-red-600/10 border border-red-600/20 shadow-xs",
+          className
+        )}
+      >
+        <img
+          src="/assets/icon/ecny.ico"
+          alt="数字人民币"
+          className="size-4.5 object-contain"
+          onError={(e) => {
+            ;(e.currentTarget as HTMLElement).style.display = "none"
+          }}
+        />
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-xs",
+        className
+      )}
+    >
+      <CreditCard className="size-4" />
+    </div>
+  )
+}
+
 function MerchantDashboard({ config }: { config?: JsonObject }) {
   const [data, setData] = React.useState<JsonObject | null>(null)
   const [loading, setLoading] = React.useState(true)
@@ -1656,9 +1885,17 @@ function MerchantDashboard({ config }: { config?: JsonObject }) {
     const timer = window.setTimeout(load, 0)
     return () => window.clearTimeout(timer)
   }, [load])
-  const channels = Array.isArray(data?.channels)
-    ? (data?.channels as JsonObject[])
-    : []
+  const channels = (
+    Array.isArray(data?.channels) ? (data?.channels as JsonObject[]) : []
+  ).filter((channel) => {
+    const name = String(channel.name ?? "").toLowerCase()
+    const showname = String(channel.showname ?? "")
+    return (
+      !name.includes("qq") &&
+      !showname.includes("QQ") &&
+      !showname.includes("qq")
+    )
+  })
   const sitename = String(config?.sitename ?? "Rainbow Pay")
   const features = objectOf(config, "features")
   const user = objectOf(config, "user")
@@ -1771,11 +2008,12 @@ function MerchantDashboard({ config }: { config?: JsonObject }) {
                       channels.map((channel) => (
                         <TableRow key={String(channel.name)} className="hover:bg-muted/40">
                           <TableCell className="py-3.5">
-                            <div className="flex items-center gap-2.5">
-                              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
-                                <CreditCard className="size-4" />
-                              </div>
-                              <span className="font-medium text-sm">
+                            <div className="flex items-center gap-3">
+                              <ChannelIcon
+                                name={String(channel.name ?? "")}
+                                showname={String(channel.showname ?? "")}
+                              />
+                              <span className="font-semibold text-sm text-foreground">
                                 {String(
                                   channel.showname ?? channel.name ?? "渠道"
                                 )}
@@ -2347,18 +2585,30 @@ export function EpayApp({ view, config }: EpayAppProps) {
         <AdminRollConfigView config={config as AdminRollConfig | undefined} />
       </WorkspaceShell>
     )
-  if (view === "merchant-shell")
+  if (view === "merchant-shell") {
+    const pageTitle = shellTitle || "商户工作台"
+    const pageDescription =
+      String(shellConfig.description ?? "") ||
+      merchantPageMeta[pageTitle] ||
+      "商户自收款、回调监听与套餐管理"
     return (
       <WorkspaceShell
         kind="merchant"
-        title={shellTitle || "商户工作台"}
-        description="商户自收款、回调监听与套餐管理"
+        title={pageTitle}
+        description={pageDescription}
         sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
         features={objectOf(shellConfig, "features")}
+        user={objectOf(shellConfig, "user")}
       >
+        <PageHeading
+          title={pageTitle}
+          description={pageDescription}
+          brandName={String(shellConfig.sitename ?? "Rainbow Pay")}
+        />
         <LegacyContentSlot className="epay-legacy-workspace-surface" />
       </WorkspaceShell>
     )
+  }
   if (view === "cashier")
     return <CashierView config={config as CashierConfig | undefined} />
   if (view === "payment") return <PaymentView />
@@ -2370,6 +2620,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         description="管理商户自收款、回调监听与通道配置"
         sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
         features={objectOf(shellConfig, "features")}
+        user={objectOf(shellConfig, "user")}
       >
         <LegacyContentSlot className="epay-legacy-workspace-surface" />
       </WorkspaceShell>
