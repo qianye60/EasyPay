@@ -16,6 +16,7 @@ $epay_ui_config['features'] = array_merge([
 	'complain' => class_exists('\\lib\\Complain\\CommUtil') && file_exists(__DIR__.'/complain.php'),
 	'mchrisk' => class_exists('\\lib\\WxMchRisk') && file_exists(__DIR__.'/mchrisk.php'),
 ], isset($epay_ui_config['features']) && is_array($epay_ui_config['features']) ? $epay_ui_config['features'] : []);
+$epay_ui_ver = @filemtime(ROOT.'assets/dist/epay-ui.css') ?: time();
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -24,8 +25,8 @@ $epay_ui_config['features'] = array_merge([
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light dark" />
   <title><?php echo htmlspecialchars((string)$epay_ui_config['title'], ENT_QUOTES, 'UTF-8'); ?></title>
-  <link href="../assets/dist/epay-ui.css" rel="stylesheet" />
-  <script type="module" src="../assets/dist/epay-ui.js"></script>
+  <link href="../assets/dist/epay-ui.css?v=<?php echo $epay_ui_ver; ?>" rel="stylesheet" />
+  <script type="module" src="../assets/dist/epay-ui.js?v=<?php echo $epay_ui_ver; ?>"></script>
 </head>
 <body>
   <div id="epay-react-root" data-epay-view="<?php echo htmlspecialchars($epay_ui_view, ENT_QUOTES, 'UTF-8'); ?>" data-epay-config="<?php echo htmlspecialchars(json_encode($epay_ui_config, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>"></div>

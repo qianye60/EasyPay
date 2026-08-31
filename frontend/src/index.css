@@ -413,56 +413,12 @@
     margin-bottom: 0.85rem;
   }
 
-  #epay-react-legacy-slot .form-horizontal .form-group {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    margin-inline: 0;
-  }
-
-  #epay-react-legacy-slot .form-horizontal .control-label,
-  #epay-react-legacy-slot .form-horizontal .col-sm-2,
-  #epay-react-legacy-slot .form-horizontal .col-sm-10,
-  #epay-react-legacy-slot .form-horizontal .col-sm-offset-2 {
-    float: none !important;
-    width: 100% !important;
-    margin-inline: 0 !important;
-    padding-inline: 0 !important;
-    text-align: left;
-  }
-
-  #epay-react-legacy-slot .form-horizontal .control-label {
-    padding-bottom: 0.4rem;
-  }
-
-  #epay-react-legacy-slot .form-horizontal .btn {
-    width: 100%;
-  }
-
-  #epay-react-legacy-slot .form-inline,
   #epay-react-legacy-slot .input-group,
   #epay-react-legacy-slot .btn-group {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.55rem;
-  }
-
-  #epay-react-legacy-slot .form-inline .form-group {
-    display: flex !important;
-    align-items: center;
-    gap: 0.55rem;
-    min-width: 0 !important;
-    flex: 1 1 22rem !important;
-  }
-
-  #epay-react-legacy-slot .form-inline .form-group .form-control,
-  #epay-react-legacy-slot .form-inline .form-group select,
-  #epay-react-legacy-slot .form-inline .form-group textarea {
-    display: block !important;
-    width: auto !important;
-    min-width: 0 !important;
-    flex: 1 1 auto !important;
   }
 
   #epay-react-legacy-slot .form-control,
@@ -821,29 +777,6 @@
       align-items: stretch;
     }
 
-    #epay-react-legacy-slot .form-inline .form-group,
-    #epay-react-legacy-slot .form-inline .input-group {
-      display: block !important;
-      width: 100% !important;
-      flex: 1 1 100% !important;
-    }
-
-    #epay-react-legacy-slot .form-inline .form-group .form-control,
-    #epay-react-legacy-slot .form-inline .form-group select,
-    #epay-react-legacy-slot .form-inline .form-group textarea {
-      width: 100% !important;
-    }
-
-    #epay-react-legacy-slot .form-inline > .form-control {
-      width: 100%;
-      flex: 1 1 100%;
-    }
-
-    #epay-react-legacy-slot .form-inline > .btn {
-      width: 100%;
-      flex: 1 1 100%;
-    }
-
     #epay-react-legacy-slot .table-responsive {
       max-width: 100%;
       -webkit-overflow-scrolling: touch;
@@ -898,6 +831,155 @@ body:has(#epay-react-root) {
     sans-serif !important;
   font-size: 1rem !important;
   line-height: 1.5 !important;
+}
+
+/*
+ * Bootstrap 3 不在 cascade layer 里。@layer components 里的适配器即使写了
+ * 更高选择器，普通声明仍会被 Bootstrap 压过；带 !important 的分层声明又会
+ * 把 col-sm-9 撑成 100% 宽，标签右对齐、输入框另起一行。下面这段不进 layer，
+ * 专门把商户/后台遗留表单拉回正常的左右布局。
+ */
+#epay-react-legacy-slot {
+  padding: 1.25rem 1.35rem 1.5rem;
+}
+
+#epay-react-legacy-slot .panel,
+#epay-react-legacy-slot .tab-container,
+#epay-react-legacy-slot .tab-content,
+#epay-react-legacy-slot .tab-pane,
+#epay-react-legacy-slot form,
+#epay-react-legacy-slot .form-horizontal,
+#epay-react-legacy-slot .form-inline {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+#epay-react-legacy-slot .bg-light.wrapper-md,
+#epay-react-legacy-slot .wrapper-md.hidden-print {
+  display: none !important;
+}
+
+#epay-react-legacy-slot .nav-tabs {
+  display: flex !important;
+  width: 100% !important;
+  float: none !important;
+  margin: 0 0 1.1rem !important;
+}
+
+#epay-react-legacy-slot .nav-tabs > li {
+  float: none !important;
+  flex: 1 1 0;
+}
+
+#epay-react-legacy-slot .nav-tabs > li > a {
+  display: block;
+  text-align: center;
+}
+
+#epay-react-legacy-slot .form-horizontal .form-group {
+  display: grid !important;
+  grid-template-columns: minmax(7.5rem, 10.5rem) minmax(0, 1fr);
+  column-gap: 1rem;
+  row-gap: 0.35rem;
+  align-items: start;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+#epay-react-legacy-slot .form-horizontal .control-label,
+#epay-react-legacy-slot .form-horizontal [class*="col-sm-"],
+#epay-react-legacy-slot .form-horizontal [class*="col-md-"],
+#epay-react-legacy-slot .form-horizontal [class*="col-xs-"] {
+  float: none !important;
+  position: static !important;
+  width: auto !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#epay-react-legacy-slot .form-horizontal .control-label {
+  grid-column: 1;
+  padding-top: 0.55rem !important;
+  text-align: right !important;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+#epay-react-legacy-slot .form-horizontal .form-group > [class*="col-"]:not(.control-label) {
+  grid-column: 2;
+  min-width: 0;
+}
+
+#epay-react-legacy-slot .form-horizontal .form-group > [class*="col-"]:only-child,
+#epay-react-legacy-slot .form-horizontal .form-group > [class*="offset-"]:first-child {
+  grid-column: 2;
+}
+
+#epay-react-legacy-slot .form-horizontal .btn {
+  width: auto !important;
+  min-width: 7.5rem;
+}
+
+#epay-react-legacy-slot .form-horizontal .btn.form-control,
+#epay-react-legacy-slot .form-horizontal input.btn.form-control {
+  width: auto !important;
+  max-width: 16rem;
+}
+
+#epay-react-legacy-slot .form-inline {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.75rem;
+}
+
+#epay-react-legacy-slot .form-inline .form-group {
+  display: flex !important;
+  flex: 0 1 auto !important;
+  align-items: center;
+  gap: 0.5rem;
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+
+#epay-react-legacy-slot .form-inline .form-group .form-control,
+#epay-react-legacy-slot .form-inline .form-group select,
+#epay-react-legacy-slot .form-inline .form-group textarea {
+  width: auto !important;
+  min-width: 10rem;
+  flex: 1 1 auto;
+}
+
+#epay-react-legacy-slot .form-inline input.form-control[style*="min-width"] {
+  min-width: 16rem !important;
+}
+
+#epay-react-legacy-slot .input-group {
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  #epay-react-legacy-slot .form-horizontal .form-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #epay-react-legacy-slot .form-horizontal .control-label,
+  #epay-react-legacy-slot .form-horizontal .form-group > [class*="col-"] {
+    grid-column: 1;
+    text-align: left !important;
+    white-space: normal;
+    padding-top: 0 !important;
+  }
+
+  #epay-react-legacy-slot .form-inline .form-group,
+  #epay-react-legacy-slot .form-inline .form-group .form-control,
+  #epay-react-legacy-slot .form-inline .form-group select,
+  #epay-react-legacy-slot .form-inline .btn {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
 }
 
 #epay-react-root {

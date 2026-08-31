@@ -36,6 +36,7 @@ if($epay_ui_view){
 }
 if($epay_ui_view && !isset($epay_ui_config['title'])) $epay_ui_config['title'] = isset($title) ? $title : '商户管理';
 if($epay_ui_view && !isset($epay_ui_config['sitename'])) $epay_ui_config['sitename'] = $conf['sitename'];
+$epay_ui_ver = @filemtime(ROOT.'assets/dist/epay-ui.css') ?: time();
 ?>
 <!DOCTYPE html>
 <html lang="zh-CN">
@@ -50,8 +51,8 @@ if($epay_ui_view && !isset($epay_ui_config['sitename'])) $epay_ui_config['sitena
   <link rel="stylesheet" href="./assets/css/font.css" type="text/css" />
   <link rel="stylesheet" href="./assets/css/app.css" type="text/css" />
   <link rel="stylesheet" href="../assets/css/bootstrap-table.css?v=1"/>
-  <?php if($epay_ui_view){?><link rel="stylesheet" href="../assets/dist/epay-ui.css" /><?php }?>
-  <?php if($epay_ui_view){?><script type="module" src="../assets/dist/epay-ui.js"></script><?php }?>
+  <?php if($epay_ui_view){?><link rel="stylesheet" href="../assets/dist/epay-ui.css?v=<?php echo $epay_ui_ver;?>" /><?php }?>
+  <?php if($epay_ui_view){?><script type="module" src="../assets/dist/epay-ui.js?v=<?php echo $epay_ui_ver;?>"></script><?php }?>
 </head>
 <body>
 <?php if($epay_ui_view){?><div id="epay-react-root" data-epay-view="<?php echo htmlspecialchars($epay_ui_view, ENT_QUOTES, 'UTF-8');?>" data-epay-config="<?php echo htmlspecialchars(json_encode($epay_ui_config, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');?>"></div>
