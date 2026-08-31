@@ -38,6 +38,7 @@ if($epay_ui_view){
 			'uid' => $userrow['uid'] ?? '',
 			'username' => !empty($userrow['username']) ? $userrow['username'] : ($userrow['account'] ?? ''),
 			'account' => $userrow['account'] ?? '',
+			'faceimg' => !empty($userrow['qq']) ? '//q2.qlogo.cn/headimg_dl?bs=qq&dst_uin='.$userrow['qq'].'&src_uin='.$userrow['qq'].'&fid='.$userrow['qq'].'&spec=100&url_enc=0&referer=bu_interface&term_type=PC' : 'assets/img/user.png',
 		];
 	}
 }

@@ -868,11 +868,14 @@ body:has(#epay-react-root) {
 
 #epay-react-legacy-slot .nav-tabs > li {
   float: none !important;
-  flex: 1 1 0;
+  flex: 1 1 0% !important;
+  width: auto !important;
+  min-width: 0 !important;
 }
 
 #epay-react-legacy-slot .nav-tabs > li > a {
   display: block;
+  width: 100%;
   text-align: center;
 }
 
@@ -1294,5 +1297,115 @@ body:has(#epay-react-root) {
 #epay-react-legacy-slot .i-checks {
   margin-right: 0.85rem;
   font-weight: 500;
+}
+
+/* 账户页：tabs + 表单卡片化 */
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container {
+  overflow: hidden;
+  border: 1px solid var(--border) !important;
+  border-radius: 1rem !important;
+  background: var(--card) !important;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%) !important;
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container > .nav-tabs {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr)) !important;
+  gap: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-bottom: 1px solid var(--border) !important;
+  background: color-mix(in oklch, var(--muted) 40%, transparent) !important;
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container > .nav-tabs > li {
+  float: none !important;
+  display: block !important;
+  flex: none !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container > .nav-tabs > li > a {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 100% !important;
+  min-height: 2.75rem;
+  margin: 0 !important;
+  padding: 0.75rem 0.5rem !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--muted-foreground) !important;
+  font-size: 0.8125rem !important;
+  font-weight: 600;
+  line-height: 1.3;
+  text-align: center !important;
+  white-space: nowrap;
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container > .nav-tabs > li.active > a,
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container > .nav-tabs > li.active > a:focus,
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container > .nav-tabs > li.active > a:hover,
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container > .nav-tabs > li > a:hover {
+  background: var(--card) !important;
+  color: var(--foreground) !important;
+  box-shadow: inset 0 -2px 0 var(--primary);
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container > .tab-content {
+  padding: 1.15rem 1.2rem 1.35rem !important;
+  background: var(--card) !important;
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container .form-horizontal {
+  width: 100% !important;
+  max-width: 48rem !important;
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container .form-horizontal .form-group > [class*="col-"] > h4,
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container .form-horizontal h4 {
+  margin: 0.35rem 0 0.15rem !important;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem !important;
+  font-weight: 650 !important;
+  color: var(--foreground) !important;
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container .form-horizontal .form-group:first-child > [class*="col-"] > h4,
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container .form-horizontal .form-group:first-child h4 {
+  border-top: 0;
+  padding-top: 0;
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container .line.line-dashed {
+  display: none !important;
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container .form-horizontal .form-group > [class*="col-"]:only-child,
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container .form-horizontal .form-group > [class*="offset-"]:first-child {
+  grid-column: 1 / -1;
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container .form-horizontal .form-group > [class*="col-"]:not(.control-label) {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container .form-horizontal .form-control,
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container .form-horizontal select.form-control,
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container .form-horizontal textarea.form-control {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+#epay-react-legacy-slot.epay-legacy-workspace-surface .tab-container .form-horizontal .input-group {
+  width: 100% !important;
+  max-width: none !important;
 }
 

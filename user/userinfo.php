@@ -1,14 +1,12 @@
 <?php
 include("../includes/common.php");
 if($islogin2==1){}else exit("<script language='javascript'>window.location.href='./login.php';</script>");
-$title='个人资料';
+$mod=isset($_GET['mod'])?$_GET['mod']:'api';
+$title=$mod=='account'?'修改密码':'API信息';
 include './head.php';
 $csrf_token = bin2hex(random_bytes(16));
 $_SESSION['csrf_token'] = $csrf_token;
 echo '<script>var user_csrf_token = "'.$csrf_token.'";</script>';
-?>
-<?php
-$mod=isset($_GET['mod'])?$_GET['mod']:'api';
 
 if(strlen($userrow['phone'])==11){
 	$userrow['phone']=substr($userrow['phone'],0,3).'****'.substr($userrow['phone'],7,10);
@@ -41,9 +39,6 @@ if(!$conf['apiurl'])$conf['apiurl'] = $siteurl;
 		</div>
  <div id="content" class="app-content" role="main">
     <div class="app-content-body ">
-<div class="bg-light lter b-b wrapper-md hidden-print">
-  <h1 class="m-n font-thin h3">个人资料</h1>
-</div>
 <div class="wrapper-md control">
 <?php if(isset($msg)){?>
 <div class="alert alert-info">
@@ -52,17 +47,17 @@ if(!$conf['apiurl'])$conf['apiurl'] = $siteurl;
 <?php }?>
 <div class="tab-container ng-isolate-scope">
 <ul class="nav nav-tabs">
-	<li style="width: 25%;" align="center" class="<?php echo $mod=='api'?'active':null?>">
+	<li align="center" class="<?php echo $mod=='api'?'active':null?>">
 		<a href="userinfo.php?mod=api">API信息</a>
 	</li>
-	<li style="width: 25%;" align="center" class="<?php echo $mod=='info'?'active':null?>">
+	<li align="center" class="<?php echo $mod=='info'?'active':null?>">
 		<a href="editinfo.php">修改资料</a>
 	</li>
-	<li style="width: 25%;" align="center" class="<?php echo $mod=='account'?'active':null?>">
+	<li align="center" class="<?php echo $mod=='account'?'active':null?>">
 		<a href="userinfo.php?mod=account">修改密码</a>
 	</li>
 	<?php if($conf['cert_open']>0){?>
-	<li style="width: 25%;" align="center">
+	<li align="center">
 		<a href="certificate.php">实名认证</a>
 	</li>
 	<?php }?>

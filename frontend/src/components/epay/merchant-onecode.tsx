@@ -117,12 +117,6 @@ export function MerchantOnecodeView({ config }: { config?: OnecodeConfig }) {
     }
   }, [styleUrl])
 
-  React.useEffect(() => {
-    if (!styles[styleName]) {
-      setStyleName(Object.keys(styles)[0] ?? "default")
-    }
-  }, [styleName, styles])
-
   const saveName = async () => {
     setSaving(true)
     setNotice(null)

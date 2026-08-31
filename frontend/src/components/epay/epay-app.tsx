@@ -29,7 +29,6 @@ import {
   Sun,
   Users,
   WalletCards,
-  Zap,
 } from "lucide-react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -77,7 +76,7 @@ import {
   MerchantPlansView,
   type MerchantPlansConfig,
 } from "@/components/epay/merchant-plans"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -148,6 +147,7 @@ type EpayView =
   | "admin-roll-config"
   | "admin-shell"
   | "merchant-dashboard"
+  | "merchant-order"
   | "merchant-onecode"
   | "merchant-plans"
   | "soft-download"
@@ -520,8 +520,8 @@ function Brand({
         compact ? "justify-center" : "gap-2.5"
       )}
     >
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-        <Zap className="size-4" aria-hidden="true" />
+      <div className="relative flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-primary via-primary/90 to-primary/75 text-primary-foreground shadow-xs shadow-primary/20 ring-1 ring-white/20">
+        <CircleDollarSign className="size-4" aria-hidden="true" />
       </div>
       {!compact && (
         <div className="min-w-0 leading-none">
@@ -817,17 +817,15 @@ function WorkspaceShell({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="h-9 gap-2 rounded-xl px-2 text-xs font-medium hover:bg-muted/80"
+          className="size-9 rounded-full px-0 text-xs font-medium hover:bg-muted/80"
+          aria-label={`打开${displayName}账户菜单`}
         >
-          <Avatar className="size-6 ring-1 ring-border/80">
+          <Avatar className="size-8 ring-1 ring-border/80">
+            {userObj.faceimg ? <AvatarImage src={String(userObj.faceimg)} alt="" /> : null}
             <AvatarFallback className="bg-primary/10 text-primary text-[11px] font-semibold">
               {kind === "admin" ? "管" : "商"}
             </AvatarFallback>
           </Avatar>
-          <span className="hidden text-xs sm:inline font-medium max-w-28 truncate">
-            {displayName}
-          </span>
-          <ChevronDown className="size-3 text-muted-foreground/60" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52 rounded-xl p-1.5 shadow-lg">
@@ -883,7 +881,7 @@ function WorkspaceShell({
         >
           <div
             className={cn(
-              "flex h-14 items-center border-b border-border/60",
+              "flex h-16 items-center border-b border-border/60 pt-1",
               collapsed ? "justify-center px-2" : "px-4"
             )}
           >
@@ -891,7 +889,7 @@ function WorkspaceShell({
               compact={collapsed}
               name={sitename}
               subtitle={subtitle}
-              role={kind === "admin" ? "管理端" : "商户版"}
+              role={kind === "admin" ? "管理端" : undefined}
             />
           </div>
           <PersistentNavScrollArea
@@ -924,7 +922,7 @@ function WorkspaceShell({
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl">
-            <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
+            <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
               <div className="flex min-w-0 items-center gap-2">
                 <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                   <SheetTrigger asChild>
@@ -954,16 +952,16 @@ function WorkspaceShell({
                     </PersistentNavScrollArea>
                   </SheetContent>
                 </Sheet>
-                <nav
-                  aria-label="面包屑"
-                  className="flex min-w-0 items-center gap-1.5 text-sm leading-none"
-                >
-                  <span className="hidden text-muted-foreground sm:inline">
-                    {kind === "admin" ? "管理控制台" : "商户中心"}
-                  </span>
-                  <ChevronRight className="hidden size-3.5 text-muted-foreground/40 sm:inline" />
-                  <span className="truncate font-medium text-foreground">{title}</span>
-                </nav>
+                {kind === "admin" ? (
+                  <nav
+                    aria-label="面包屑"
+                    className="flex min-w-0 items-center gap-1.5 text-sm leading-none"
+                  >
+                    <span className="hidden text-muted-foreground sm:inline">管理控制台</span>
+                    <ChevronRight className="hidden size-3.5 text-muted-foreground/40 sm:inline" />
+                    <span className="truncate font-medium text-foreground">{title}</span>
+                  </nav>
+                ) : null}
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
                 <Button
@@ -1076,6 +1074,9 @@ const merchantPageMeta: Record<string, string> = {
   软件下载: "下载安卓监控端并完成配置",
   聚合收款: "一个码收多种支付方式",
   套餐购买: "购买适合你的服务套餐",
+  API信息: "查看接口地址、商户密钥与签名配置",
+  修改资料: "设置收款账号、联系方式与通知选项",
+  修改密码: "修改商户登录密码",
   个人资料: "查看与修改商户资料",
   实名认证: "完成商户实名认证",
   保证金管理: "查看与缴纳保证金",
@@ -2454,6 +2455,19 @@ export function EpayApp({ view, config }: EpayAppProps) {
       </WorkspaceShell>
     )
   }
+  if (view === "merchant-order")
+    return (
+      <WorkspaceShell
+        kind="merchant"
+        title="订单记录"
+        description="查询、筛选与核对商户交易订单"
+        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        features={objectOf(shellConfig, "features")}
+        user={objectOf(shellConfig, "user")}
+      >
+        <AdminOrderView config={{ ...(config as AdminOrderConfig | undefined), kind: "merchant" }} />
+      </WorkspaceShell>
+    )
   if (view === "admin-order")
     return (
       <WorkspaceShell
