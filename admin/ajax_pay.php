@@ -1,0 +1,758 @@
+<?php
+include("../includes/common.php");
+if($islogin==1){}else exit("<script language='javascript'>window.location.href='./login.php';</script>");
+$act=isset($_GET['act'])?daddslashes($_GET['act']):null;
+
+if(!checkRefererHost())exit('{"code":403}');
+if($_SERVER['REQUEST_METHOD']==='POST' && (!isset($_POST['csrf_token']) || $_POST['csrf_token']!==$_SESSION['admin_csrf_token'])) exit('{"code":403,"msg":"CSRF验证失败"}');
+
+@header('Content-Type: application/json; charset=UTF-8');
+
+function checkPluginSupportType($typeid, $plugin){
+	global $DB;
+	if($typeid <= 0)
+		return ['code'=>-1, 'msg'=>'当前支付方式不存在！'];
+	if(empty($plugin))
+		return ['code'=>-1, 'msg'=>'请选择支付插件！'];
+
+	$type = $DB->getColumn("SELECT name FROM pre_type WHERE id=:id", [':id'=>$typeid]);
+	if(!$type)
+		return ['code'=>-1, 'msg'=>'当前支付方式不存在！'];
+
+	$row = $DB->getRow("SELECT types FROM pre_plugin WHERE name=:name LIMIT 1", [':name'=>$plugin]);
+	if(!$row)
+		return ['code'=>-1, 'msg'=>'当前支付插件不存在！'];
+
+	$types = array_filter(array_map('trim', explode(',', $row['types'] ?? '')));
+	if(!in_array($type, $types, true))
+		return ['code'=>-1, 'msg'=>'当前插件不支持该支付方式，请检查支付方式调用值'];
+
+	return ['code'=>0, 'msg'=>'succ'];
+}
+
+switch($act){
+case 'channelList':
+	$conditions = ["1=1"];
+	$params = [];
+	if(isset($_POST['id']) && !empty($_POST['id'])) {
+		$conditions[] = "A.`id`=:f_id";
+		$params[':f_id'] = intval($_POST['id']);
+	}
+	if(isset($_POST['type']) && !empty($_POST['type'])) {
+		$conditions[] = "A.`type`=:f_type";
+		$params[':f_type'] = intval($_POST['type']);
+	}
+	if(isset($_POST['plugin']) && !empty($_POST['plugin'])) {
+		$conditions[] = "A.`plugin`=:f_plugin";
+		$params[':f_plugin'] = trim($_POST['plugin']);
+	}
+	if(isset($_POST['dstatus']) && $_POST['dstatus']>-1) {
+		$conditions[] = "A.`status`=:f_dstatus";
+		$params[':f_dstatus'] = intval($_POST['dstatus']);
+	}
+	if(isset($_POST['kw']) && !empty($_POST['kw'])) {
+		$kw = trim($_POST['kw']);
+		$conditions[] = "(A.`id`=:f_kw OR A.`name` like :f_kw_like)";
+		$params[':f_kw'] = $kw;
+		$params[':f_kw_like'] = '%'.$kw.'%';
+	}
+	$where = implode(' AND ', $conditions);
+	$list = $DB->getAll("SELECT A.*,B.name typename,B.showname typeshowname FROM pre_channel A LEFT JOIN pre_type B ON A.type=B.id WHERE {$where} ORDER BY id DESC", $params);
+	exit(json_encode($list));
+break;
+
+case 'getPayType':
+	$id=intval($_GET['id']);
+	$row=$DB->getRow("select * from pre_type where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前支付方式不存在！"}');
+	$result = ['code'=>0,'msg'=>'succ','data'=>$row];
+	exit(json_encode($result));
+break;
+case 'setPayType':
+	$id=intval($_GET['id']);
+	$status=intval($_GET['status']);
+	$row=$DB->getRow("select * from pre_type where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前支付方式不存在！"}');
+	if($DB->exec("UPDATE pre_type SET status=:status WHERE id=:id", [':status'=>$status, ':id'=>$id]))exit('{"code":0,"msg":"修改支付方式成功！"}');
+	else exit('{"code":-1,"msg":"修改支付方式失败['.$DB->error().']"}');
+break;
+case 'delPayType':
+	$id=intval($_GET['id']);
+	$row=$DB->getRow("select * from pre_type where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前支付方式不存在！"}');
+	$row=$DB->getRow("select * from pre_channel where type=:id limit 1", [':id'=>$id]);
+	if($row)
+		exit('{"code":-1,"msg":"删除失败，存在使用该支付方式的支付通道"}');
+	if($DB->delete('type', ['id'=>$id]))exit('{"code":0,"msg":"删除支付方式成功！"}');
+	else exit('{"code":-1,"msg":"删除支付方式失败['.$DB->error().']"}');
+break;
+case 'savePayType':
+	if($_POST['action'] == 'add'){
+		$name=trim($_POST['name']);
+		$showname=trim($_POST['showname']);
+		$device=intval($_POST['device']);
+		if(!preg_match('/^[a-zA-Z0-9_.-]+$/',$name)){
+			exit('{"code":-1,"msg":"调用值不符合规则"}');
+		}
+		$row=$DB->getRow("select * from pre_type where name=:name and device=:device limit 1", [':name'=>$name, ':device'=>$device]);
+		if($row)
+			exit('{"code":-1,"msg":"同一个调用值+支持设备不能重复"}');
+		$data = ['name'=>$name, 'showname'=>$showname, 'device'=>$device, 'status'=>1];
+		if($DB->insert('type', $data))exit('{"code":0,"msg":"新增支付方式成功！"}');
+		else exit('{"code":-1,"msg":"新增支付方式失败['.$DB->error().']"}');
+	}else{
+		$id=intval($_POST['id']);
+		$name=trim($_POST['name']);
+		$showname=trim($_POST['showname']);
+		$device=intval($_POST['device']);
+		if(!preg_match('/^[a-zA-Z0-9_.-]+$/',$name)){
+			exit('{"code":-1,"msg":"调用值不符合规则"}');
+		}
+		$row=$DB->getRow("select * from pre_type where name=:name and device=:device and id<>:id limit 1", [':name'=>$name, ':device'=>$device, ':id'=>$id]);
+		if($row)
+			exit('{"code":-1,"msg":"同一个调用值+支持设备不能重复"}');
+		$data = ['name'=>$name, 'showname'=>$showname, 'device'=>$device];
+		if($DB->update('type', $data, ['id'=>$id])!==false)exit('{"code":0,"msg":"修改支付方式成功！"}');
+		else exit('{"code":-1,"msg":"修改支付方式失败['.$DB->error().']"}');
+	}
+break;
+case 'getPlugin':
+	$name = trim($_GET['name']);
+	$row=$DB->getRow("SELECT * FROM pre_plugin WHERE name=:name", [':name'=>$name]);
+	if($row){
+		$result = ['code'=>0,'msg'=>'succ','data'=>$row];
+		exit(json_encode($result));
+	}
+	else exit('{"code":-1,"msg":"当前支付插件不存在！"}');
+break;
+case 'getPlugins':
+	$typeid = intval($_GET['typeid']);
+	$type=$DB->getColumn("SELECT name FROM pre_type WHERE id=:id", [':id'=>$typeid]);
+	if(!$type)
+		exit('{"code":-1,"msg":"当前支付方式不存在！"}');
+	$list=$DB->getAll("SELECT name,showname FROM pre_plugin WHERE FIND_IN_SET(:type, types)>0 ORDER BY name ASC", [':type'=>$type]);
+	if($list){
+		$result = ['code'=>0,'msg'=>'succ','data'=>$list];
+		exit(json_encode($result));
+	}
+	else exit('{"code":-1,"msg":"没有找到支持该支付方式的插件"}');
+break;
+case 'getChannel':
+	$id=intval($_GET['id']);
+	$row=$DB->getRow("SELECT * FROM pre_channel WHERE id=:id", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前支付通道不存在！"}');
+	$result = ['code'=>0,'msg'=>'succ','data'=>$row];
+	exit(json_encode($result));
+break;
+case 'getChannels':
+	$typeid = intval($_GET['typeid']);
+	$type=$DB->getColumn("SELECT name FROM pre_type WHERE id=:typeid", [':typeid'=>$typeid]);
+	if(!$type)
+		exit('{"code":-1,"msg":"当前支付方式不存在！"}');
+	$list=$DB->getAll("SELECT id,name FROM pre_channel WHERE type=:typeid and status=1 ORDER BY id ASC", [':typeid'=>$typeid]);
+	if($list){
+		$result = ['code'=>0,'msg'=>'succ','data'=>$list];
+		exit(json_encode($result));
+	}
+	else exit('{"code":-1,"msg":"没有找到支持该支付方式的通道"}');
+break;
+case 'getChannelsByPlugin':
+	$plugin = trim($_GET['plugin']);
+	if($plugin){
+		$list=$DB->getAll("SELECT id,name FROM pre_channel WHERE plugin=:plugin ORDER BY id ASC", [':plugin'=>$plugin]);
+	}else{
+		$list=$DB->getAll("SELECT id,name FROM pre_channel ORDER BY id ASC");
+	}
+	if($list){
+		$result = ['code'=>0,'msg'=>'succ','data'=>$list];
+		exit(json_encode($result));
+	}
+	else exit('{"code":-1,"msg":"没有找到支持该支付插件的通道"}');
+break;
+case 'getSubChannels':
+	$channel = intval($_GET['channel']);
+	$uid = intval($_GET['uid']);
+	$conditions = "channel=:channel";
+	$params = [':channel'=>$channel];
+	if($uid > 0) {
+		$conditions .= " AND uid=:uid";
+		$params[':uid'] = $uid;
+	}
+	$list=$DB->getAll("SELECT id,name,channel,apply_id FROM pre_subchannel WHERE {$conditions} ORDER BY id ASC", $params);
+	$result = ['code'=>0,'msg'=>'succ','data'=>$list];
+	exit(json_encode($result));
+break;
+case 'setChannel':
+	$id=intval($_GET['id']);
+	$status=intval($_GET['status']);
+	$row=$DB->getRow("SELECT * FROM pre_channel WHERE id=:id", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前支付通道不存在！"}');
+	if($status==1 && empty($row['config'])){
+		exit('{"code":-1,"msg":"请先配置好密钥后再开启"}');
+	}
+	if($status==1 && $conf['admin_pwd']=='123456'){
+		exit('{"code":-1,"msg":"请先修改默认管理员密码后再开启支付通道"}');
+	}
+	if($DB->exec("UPDATE pre_channel SET status=:status WHERE id=:id", [':status'=>$status, ':id'=>$id]))exit('{"code":0,"msg":"修改支付通道成功！"}');
+	else exit('{"code":-1,"msg":"修改支付通道失败['.$DB->error().']"}');
+break;
+case 'delChannel':
+	$id=intval($_GET['id']);
+	$row=$DB->getRow("SELECT * FROM pre_channel WHERE id=:id", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前支付通道不存在！"}');
+	if($DB->find('psreceiver', '*', ['channel'=>$id])){
+		exit('{"code":-1,"msg":"当前支付通道下有分账规则，需要先删除"}');
+	}
+	if($DB->find('applychannel', '*', ['channel'=>$id])){
+		exit('{"code":-1,"msg":"当前支付通道关联了进件渠道，无法删除"}');
+	}
+	if($DB->delete('channel', ['id'=>$id])){
+		$DB->exec("DELETE FROM pre_subchannel WHERE channel=:id", [':id'=>$id]);
+		exit('{"code":0,"msg":"删除支付通道成功！"}');
+	}
+	else exit('{"code":-1,"msg":"删除支付通道失败['.$DB->error().']"}');
+break;
+case 'saveChannel':
+	if($_POST['action'] == 'add'){
+		$name=trim($_POST['name']);
+		$rate=trim($_POST['rate']);
+		$costrate=trim($_POST['costrate']);
+		$type=intval($_POST['type']);
+		$plugin=trim($_POST['plugin']);
+		$daytop=intval($_POST['daytop']);
+		$mode=intval($_POST['mode']);
+		$paymin=trim($_POST['paymin']);
+		$paymax=trim($_POST['paymax']);
+		$daymaxorder=intval($_POST['daymaxorder']);
+		$timestart=!isNullOrEmpty($_POST['timestart'])?trim($_POST['timestart']):null;
+		$timestop=!isNullOrEmpty($_POST['timestart'])?trim($_POST['timestop']):null;
+		if(empty($rate)) $rate = 100;
+		if(!preg_match('/^[0-9.]+$/',$rate)){
+			exit('{"code":-1,"msg":"分成比例不符合规则"}');
+		}
+		if(!empty($costrate) && !preg_match('/^[0-9.]+$/',$costrate)){
+			exit('{"code":-1,"msg":"通道成本不符合规则"}');
+		}
+		if($paymin && !preg_match('/^[0-9.]+$/',$paymin)){
+			exit('{"code":-1,"msg":"最小支付金额不符合规则"}');
+		}
+		if($paymax && !preg_match('/^[0-9.]+$/',$paymax)){
+			exit('{"code":-1,"msg":"最大支付金额不符合规则"}');
+		}
+		$row=$DB->getRow("SELECT * FROM pre_channel WHERE name=:name LIMIT 1", [':name'=>$name]);
+		if($row)
+			exit('{"code":-1,"msg":"支付通道名称重复"}');
+		$support = checkPluginSupportType($type, $plugin);
+		if($support['code'] != 0) exit(json_encode($support, JSON_UNESCAPED_UNICODE));
+		$data = ['name'=>$name, 'rate'=>$rate, 'costrate'=>$costrate, 'mode'=>$mode, 'type'=>$type, 'plugin'=>$plugin, 'daytop'=>$daytop, 'paymin'=>$paymin, 'paymax'=>$paymax, 'daymaxorder'=>$daymaxorder, 'timestart'=>$timestart, 'timestop'=>$timestop];
+		if($DB->insert('channel', $data))exit('{"code":0,"msg":"新增支付通道成功！"}');
+		else exit('{"code":-1,"msg":"新增支付通道失败['.$DB->error().']"}');
+	}elseif($_POST['action'] == 'copy'){
+		$id=intval($_POST['id']);
+		$row=$DB->getRow("SELECT * FROM pre_channel WHERE id=:id", [':id'=>$id]);
+		if(!$row) exit('{"code":-1,"msg":"当前支付通道不存在！"}');
+		$name=trim($_POST['name']);
+		$rate=trim($_POST['rate']);
+		$costrate=trim($_POST['costrate']);
+		$type=intval($_POST['type']);
+		$plugin=trim($_POST['plugin']);
+		$daytop=intval($_POST['daytop']);
+		$mode=intval($_POST['mode']);
+		$paymin=trim($_POST['paymin']);
+		$paymax=trim($_POST['paymax']);
+		$daymaxorder=intval($_POST['daymaxorder']);
+		$timestart=!isNullOrEmpty($_POST['timestart'])?trim($_POST['timestart']):null;
+		$timestop=!isNullOrEmpty($_POST['timestart'])?trim($_POST['timestop']):null;
+		if(!preg_match('/^[0-9.]+$/',$rate)){
+			exit('{"code":-1,"msg":"分成比例不符合规则"}');
+		}
+		if(!empty($costrate) && !preg_match('/^[0-9.]+$/',$costrate)){
+			exit('{"code":-1,"msg":"通道成本不符合规则"}');
+		}
+		if($paymin && !preg_match('/^[0-9.]+$/',$paymin)){
+			exit('{"code":-1,"msg":"最小支付金额不符合规则"}');
+		}
+		if($paymax && !preg_match('/^[0-9.]+$/',$paymax)){
+			exit('{"code":-1,"msg":"最大支付金额不符合规则"}');
+		}
+		$nrow=$DB->getRow("SELECT * FROM pre_channel WHERE name=:name LIMIT 1", [':name'=>$name]);
+		if($nrow)
+			exit('{"code":-1,"msg":"支付通道名称重复"}');
+		$support = checkPluginSupportType($type, $plugin);
+		if($support['code'] != 0) exit(json_encode($support, JSON_UNESCAPED_UNICODE));
+		$data = ['name'=>$name, 'rate'=>$rate, 'costrate'=>$costrate, 'mode'=>$mode, 'type'=>$type, 'plugin'=>$plugin, 'daytop'=>$daytop, 'paymin'=>$paymin, 'paymax'=>$paymax, 'daymaxorder'=>$daymaxorder, 'config'=>$row['config'], 'apptype'=>$row['apptype'], 'appwxmp'=>$row['appwxmp'], 'appwxa'=>$row['appwxa'], 'timestart'=>$timestart, 'timestop'=>$timestop];
+		if($DB->insert('channel', $data))exit('{"code":0,"msg":"复制支付通道成功！"}');
+		else exit('{"code":-1,"msg":"复制支付通道失败['.$DB->error().']"}');
+	}elseif($_POST['action'] == 'edit'){
+		$id=intval($_POST['id']);
+		$row=$DB->getRow("SELECT * FROM pre_channel WHERE id=:id", [':id'=>$id]);
+		if(!$row) exit('{"code":-1,"msg":"当前支付通道不存在！"}');
+		$name=trim($_POST['name']);
+		$rate=trim($_POST['rate']);
+		$costrate=trim($_POST['costrate']);
+		$type=intval($_POST['type']);
+		$plugin=trim($_POST['plugin']);
+		$daytop=intval($_POST['daytop']);
+		$mode=intval($_POST['mode']);
+		$paymin=trim($_POST['paymin']);
+		$paymax=trim($_POST['paymax']);
+		$daymaxorder=intval($_POST['daymaxorder']);
+		$timestart=!isNullOrEmpty($_POST['timestart'])?trim($_POST['timestart']):null;
+		$timestop=!isNullOrEmpty($_POST['timestart'])?trim($_POST['timestop']):null;
+		if(!preg_match('/^[0-9.]+$/',$rate)){
+			exit('{"code":-1,"msg":"分成比例不符合规则"}');
+		}
+		if(!empty($costrate) && !preg_match('/^[0-9.]+$/',$costrate)){
+			exit('{"code":-1,"msg":"通道成本不符合规则"}');
+		}
+		if($paymin && !preg_match('/^[0-9.]+$/',$paymin)){
+			exit('{"code":-1,"msg":"最小支付金额不符合规则"}');
+		}
+		if($paymax && !preg_match('/^[0-9.]+$/',$paymax)){
+			exit('{"code":-1,"msg":"最大支付金额不符合规则"}');
+		}
+		$nrow=$DB->getRow("SELECT * FROM pre_channel WHERE name=:name AND id<>:id LIMIT 1", [':name'=>$name, ':id'=>$id]);
+		if($nrow)
+			exit('{"code":-1,"msg":"支付通道名称重复"}');
+		$support = checkPluginSupportType($type, $plugin);
+		if($support['code'] != 0) exit(json_encode($support, JSON_UNESCAPED_UNICODE));
+		$data = ['name'=>$name, 'rate'=>$rate, 'costrate'=>$costrate, 'mode'=>$mode, 'type'=>$type, 'plugin'=>$plugin, 'daytop'=>$daytop, 'paymin'=>$paymin, 'paymax'=>$paymax, 'daymaxorder'=>$daymaxorder, 'timestart'=>$timestart, 'timestop'=>$timestop];
+		if($DB->update('channel', $data, ['id'=>$id])!==false){
+			if($row['daystatus']==1 && ($daytop==0 || $daytop>$row['daytop'] || $daymaxorder==0)){
+				$DB->exec("UPDATE pre_channel SET daystatus=0 WHERE id=:id", [':id'=>$id]);
+			}
+			exit('{"code":0,"msg":"修改支付通道成功！"}');
+		}else exit('{"code":-1,"msg":"修改支付通道失败['.$DB->error().']"}');
+	}
+break;
+case 'channelInfo':
+	$id=intval($_GET['id']);
+	$row=$DB->getRow("SELECT * FROM pre_channel WHERE id=:id", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前支付通道不存在！"}');
+	$typename = $DB->getColumn("SELECT name FROM pre_type WHERE id=:type_id", [':type_id'=>$row['type']]);
+	//if($row['mode']>0){
+	//	exit('{"code":-1,"msg":"当前通道为商户直清模式，请进入用户列表-编辑-接口密钥进行配置"}');
+	//}
+	$apptype = explode(',',$row['apptype']);
+	$plugin = \lib\Plugin::getConfig($row['plugin']);
+	if(!$plugin)
+		exit('{"code":-1,"msg":"当前支付插件不存在！"}');
+
+	$select_list = [];
+	if(!empty($plugin['select_'.$typename])){
+		$select_list = $plugin['select_'.$typename];
+	}
+	elseif(!empty($plugin['select'])){
+		$select_list = $plugin['select'];
+	}
+	$fields = [];
+	if(count($select_list) > 0) $fields[] = ['key'=>'apptype','label'=>'可用接口','type'=>'checkbox','value'=>$apptype,'options'=>$select_list,'required'=>true];
+	$config = json_decode($row['config'],true);
+	foreach($plugin['inputs'] as $key=>$input){
+		$fieldType = in_array($input['type'] ?? 'text', ['textarea','select','checkbox'], true) ? $input['type'] : 'text';
+		$fields[] = ['key'=>$key,'label'=>(string)($input['name'] ?? $key),'type'=>$fieldType,'value'=>$config[$key] ?? '', 'note'=>(string)($input['note'] ?? ''),'options'=>$input['options'] ?? []];
+	}
+	$wxmpOptions = [];
+	if($plugin['bindwxmp'] && $row['type']==2){
+		$wxmplist = $DB->getAll("SELECT * FROM pre_weixin WHERE type=0 ORDER BY id ASC");
+		$wxmpOptions['0'] = '不绑定';
+		foreach($wxmplist as $wxmp){
+			$wxmpOptions[(string)$wxmp['id']] = $wxmp['name'].'（'.$wxmp['appid'].'）';
+		}
+		$fields[] = ['key'=>'appwxmp','label'=>'绑定微信公众号','type'=>'select','value'=>(string)$row['appwxmp'],'options'=>$wxmpOptions];
+	}
+	$wxaOptions = [];
+	if($plugin['bindwxa'] && $row['type']==2){
+		$wxalist = $DB->getAll("SELECT * FROM pre_weixin WHERE type=1 ORDER BY id ASC");
+		$wxaOptions['0'] = '不绑定';
+		foreach($wxalist as $wxa){
+			$wxaOptions[(string)$wxa['id']] = $wxa['name'].'（'.$wxa['appid'].'）';
+		}
+		$fields[] = ['key'=>'appwxa','label'=>'绑定微信小程序','type'=>'select','value'=>(string)$row['appwxa'],'options'=>$wxaOptions];
+	}
+
+	$note = str_replace(['[siteurl]','[channel]','[basedir]'],[$siteurl,$id,ROOT],$plugin['note']);
+
+	$result = ['code'=>0,'msg'=>'succ','data'=>['id'=>$id,'type'=>(int)$row['type'],'typename'=>(string)$typename,'fields'=>$fields,'note'=>$note,'bindwxmp'=>!empty($plugin['bindwxmp']),'bindwxa'=>!empty($plugin['bindwxa'])]];
+	exit(json_encode($result));
+break;
+case 'saveChannelInfo':
+	$id=intval($_GET['id']);
+	$config=isset($_POST['config'])?$_POST['config']:null;
+	$appwxmp=isset($_POST['appwxmp'])?intval($_POST['appwxmp']):null;
+	$appwxa=isset($_POST['appwxa'])?intval($_POST['appwxa']):null;
+	if(isset($_POST['isapptype'])){
+		if(!isset($_POST['apptype']) || count($_POST['apptype'])<=0)exit('{"code":-1,"msg":"请至少选择一个可用的支付接口"}');
+		$apptype=implode(',',$_POST['apptype']);
+	}else{
+		$apptype=null;
+	}
+	if(empty($config)) exit('{"code":-1,"msg":"填写的内容不能为空"}');
+	$config = json_encode($config);
+	$data = ['config'=>$config, 'apptype'=>$apptype, 'appwxmp'=>$appwxmp, 'appwxa'=>$appwxa];
+	if($DB->update('channel', $data, ['id'=>$id])!==false)exit('{"code":0,"msg":"修改支付密钥成功！"}');
+	else exit('{"code":-1,"msg":"修改支付密钥失败['.$DB->error().']"}');
+break;
+case 'getRoll':
+	$id=intval($_GET['id']);
+	$row=$DB->getRow("select * from pre_roll where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前轮询组不存在！"}');
+	$result = ['code'=>0,'msg'=>'succ','data'=>$row];
+	exit(json_encode($result));
+break;
+case 'setRoll':
+	$id=intval($_GET['id']);
+	$status=intval($_GET['status']);
+	$row=$DB->getRow("select * from pre_roll where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前轮询组不存在！"}');
+	if($status==1 && empty($row['info'])){
+		exit('{"code":-1,"msg":"请先配置好支付通道后再开启"}');
+	}
+	if($DB->exec("UPDATE pre_roll SET status=:status WHERE id=:id", [':status'=>$status, ':id'=>$id]))exit('{"code":0,"msg":"修改轮询组成功！"}');
+	else exit('{"code":-1,"msg":"修改轮询组失败['.$DB->error().']"}');
+break;
+case 'delRoll':
+	$id=intval($_GET['id']);
+	$row=$DB->getRow("select * from pre_roll where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前轮询组不存在！"}');
+	if($DB->delete('roll', ['id'=>$id]))exit('{"code":0,"msg":"删除轮询组成功！"}');
+	else exit('{"code":-1,"msg":"删除轮询组失败['.$DB->error().']"}');
+break;
+case 'saveRoll':
+	if($_POST['action'] == 'add'){
+		$name=trim($_POST['name']);
+		$type=intval($_POST['type']);
+		$kind=intval($_POST['kind']);
+		$row=$DB->getRow("select * from pre_roll where name=:name limit 1", [':name'=>$name]);
+		if($row)
+			exit('{"code":-1,"msg":"轮询组名称重复"}');
+		if($DB->insert('roll', ['name'=>$name, 'type'=>$type, 'kind'=>$kind]))exit('{"code":0,"msg":"新增轮询组成功！"}');
+		else exit('{"code":-1,"msg":"新增轮询组失败['.$DB->error().']"}');
+	}else{
+		$id=intval($_POST['id']);
+		$name=trim($_POST['name']);
+		$type=intval($_POST['type']);
+		$kind=intval($_POST['kind']);
+		$row=$DB->getRow("select * from pre_roll where name=:name and id<>:id limit 1", [':name'=>$name, ':id'=>$id]);
+		if($row)
+			exit('{"code":-1,"msg":"轮询组名称重复"}');
+		if($DB->update('roll', ['name'=>$name, 'type'=>$type, 'kind'=>$kind], ['id'=>$id])!==false)exit('{"code":0,"msg":"修改轮询组成功！"}');
+		else exit('{"code":-1,"msg":"修改轮询组失败['.$DB->error().']"}');
+	}
+break;
+case 'rollInfo':
+	$id=intval($_GET['id']);
+	$row=$DB->getRow("select * from pre_roll where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前轮询组不存在！"}');
+	$conditions = "type=:roll_type";
+	$params = [':roll_type'=>$row['type']];
+	if($row['kind'] < 2) {
+		$conditions .= " AND status=1";
+	}
+	$list=$DB->getAll("select id,name from pre_channel where {$conditions} ORDER BY id ASC", $params);
+	if(!$list)exit('{"code":-1,"msg":"没有找到支持该支付方式的通道"}');
+	if(!empty($row['info'])){
+		$arr = explode(',',$row['info']);
+		$info = [];
+		foreach($arr as $item){
+			$a = explode(':',$item);
+			$info[] = ['channel'=>$a[0], 'weight'=>$a[1]?$a[1]:1];
+		}
+	}else{
+		$info = null;
+	}
+	$result=array("code"=>0,"msg"=>"succ","channels"=>$list,"info"=>$info,"kind"=>$row['kind']);
+	exit(json_encode($result));
+break;
+case 'saveRollInfo':
+	$id=intval($_GET['id']);
+	$row=$DB->getRow("select * from pre_roll where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前轮询组不存在！"}');
+	$list=$_POST['list'];
+	if(empty($list))
+		exit('{"code":-1,"msg":"通道配置不能为空！"}');
+	$info = '';
+	foreach($list as $a){
+		if(!preg_match('/^[0-9]+$/', $a['channel']??'')) continue;
+		$info .= $row['kind']==1 ? $a['channel'].':'.intval($a['weight']??1).',' : $a['channel'].',';
+	}
+	$info = trim($info,',');
+	if(empty($info))
+		exit('{"code":-1,"msg":"通道配置不能为空！"}');
+	$sql = "UPDATE pre_roll SET info=:info WHERE id=:id";
+	if($DB->exec($sql, [':info'=>$info, ':id'=>$id])!==false)exit('{"code":0,"msg":"修改轮询组成功！"}');
+	else exit('{"code":-1,"msg":"修改轮询组失败['.$DB->error().']"}');
+break;
+
+case 'getChannelMoney': //统计支付通道金额
+	$type=intval($_GET['type']);
+	$channel=intval($_GET['channel']);
+	if($type == 2 || $type == 3){
+		$today=$type==3 ? date("Y-m-d", strtotime("-1 day")) : date("Y-m-d");
+		$orders=$DB->getColumn("SELECT COUNT(*) FROM pre_order WHERE date=:today AND channel=:channel AND status>0", [':today'=>$today, ':channel'=>$channel]);
+		exit('{"code":0,"msg":"succ","money":"'.$orders.'"}');
+	}else{
+		$today=$type==1 ? date("Y-m-d", strtotime("-1 day")) : date("Y-m-d");
+		$money=$DB->getColumn("SELECT SUM(realmoney) FROM pre_order WHERE date=:today AND channel=:channel AND status>0", [':today'=>$today, ':channel'=>$channel]);
+		exit('{"code":0,"msg":"succ","money":"'.round($money,2).'"}');
+	}
+break;
+case 'getSubChannelMoney': //统计子通道金额
+	$type=intval($_GET['type']);
+	$channel=trim($_GET['channel']);
+	$today=$type==1 ? date("Y-m-d", strtotime("-1 day")) : date("Y-m-d");
+	$channel = explode('|', $channel);
+	$channel = array_map('intval', $channel);
+	$placeholders = [];
+	$params = [':today'=>$today];
+	foreach($channel as $k=>$v){
+		$placeholders[] = ":ch_{$k}";
+		$params[":ch_{$k}"] = $v;
+	}
+	$money=$DB->getColumn("SELECT SUM(realmoney) FROM pre_order WHERE date=:today AND subchannel IN (".implode(",", $placeholders).") AND status>0", $params);
+	exit('{"code":0,"msg":"succ","money":"'.round($money,2).'"}');
+break;
+case 'getTypeMoney': //统计支付方式金额
+	$type=intval($_GET['type']);
+	$typeid=intval($_GET['typeid']);
+	$today=$type==1 ? date("Y-m-d", strtotime("-1 day")) : date("Y-m-d");
+	$money=$DB->getColumn("SELECT SUM(realmoney) FROM pre_order WHERE date=:today AND type=:typeid AND status>0", [':today'=>$today, ':typeid'=>$typeid]);
+	exit('{"code":0,"msg":"succ","money":"'.round($money,2).'"}');
+break;
+case 'getChannelRate':
+	$channel=intval($_GET['channel']);
+	$thtime = date("Y-m-d").' 00:00:00';
+	$all = 0;
+	$success = 0;
+	$orders=$DB->getAll("SELECT * FROM pre_order WHERE addtime>=:thtime AND channel=:channel", [':thtime'=>$thtime, ':channel'=>$channel]);
+	foreach($orders as $order){
+		$all++;
+		if($order['status']>0)$success++;
+	}
+	$rate = $all > 0 ? round($success*100/$all, 2) : 0;
+	exit('{"code":0,"msg":"succ","rate":"'.$rate.'"}');
+break;
+case 'getSuccessRate':
+	$channel = intval($_GET['channel']);
+	$thtime = date("Y-m-d");
+	$orderrow=$DB->getRow("SELECT COUNT(*) allnum,COUNT(IF(status>0, 1, NULL)) sucnum FROM pre_order WHERE addtime>=:thtime AND channel=:channel", [':thtime'=>$thtime, ':channel'=>$channel]);
+	$success_rate = $orderrow && $orderrow['allnum'] > 0 ? round($orderrow['sucnum']/$orderrow['allnum']*100,2) : 100;
+	exit('{"code":0,"msg":"succ","data":"' . $success_rate . '"}');
+break;
+
+case 'testpay':
+	$channel=intval($_POST['channel']);
+	$subchannel=intval($_POST['subchannel']);
+	$param=!empty($_POST['param'])?trim($_POST['param']):null;
+	$row=$DB->getRow("select * from pre_channel where id=:id limit 1", [':id'=>$channel]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前支付通道不存在！"}');
+	if($subchannel > 0){
+		if(!$DB->getRow("select * from pre_subchannel where id=:id limit 1", [':id'=>$subchannel])) exit('{"code":-1,"msg":"当前子通道不存在！"}');
+	}
+	if(empty($row['config']))exit('{"code":-1,"msg":"请先配置好密钥"}');
+	if(!$conf['test_pay_uid'])exit('{"code":-1,"msg":"请先配置测试支付收款商户ID"}');
+	$money=trim($_POST['money']);
+	$name=trim($_POST['name']);
+	if($money<=0 || !is_numeric($money) || !preg_match('/^[0-9.]+$/', $money))exit('{"code":-1,"msg":"金额不合法"}');
+	if($conf['pay_maxmoney']>0 && $money>$conf['pay_maxmoney'])exit('{"code":-1,"msg":"最大支付金额是'.$conf['pay_maxmoney'].'元"}');
+	if($conf['pay_minmoney']>0 && $money<$conf['pay_minmoney'])exit('{"code":-1,"msg":"最小支付金额是'.$conf['pay_minmoney'].'元"}');
+	$trade_no=date("YmdHis").rand(11111,99999);
+	$return_url=$siteurl.'user/test.php?ok=1&trade_no='.$trade_no;
+	$domain=getdomain($return_url);
+	if(!$DB->exec("INSERT INTO `pre_order` (`trade_no`,`out_trade_no`,`uid`,`tid`,`addtime`,`name`,`money`,`type`,`channel`,`subchannel`,`realmoney`,`getmoney`,`notify_url`,`return_url`,`domain`,`ip`,`param`,`status`) VALUES (:trade_no, :out_trade_no, :uid, 3, NOW(), :name, :money, :type, :channel, :subchannel, :realmoney, :getmoney, :notify_url, :return_url, :domain, :clientip, :param, 0)", [':trade_no'=>$trade_no, ':out_trade_no'=>$trade_no, ':uid'=>$conf['test_pay_uid'], ':name'=>$name, ':money'=>$money, ':type'=>$row['type'], ':channel'=>$channel, ':subchannel'=>$subchannel, ':realmoney'=>$money, ':getmoney'=>$money, ':notify_url'=>$return_url, ':return_url'=>$return_url, ':domain'=>$domain, ':clientip'=>$clientip, ':param'=>$param]))exit('{"code":-1,"msg":"创建订单失败，请返回重试！"}');
+	$result = ['code'=>0, 'msg'=>'succ', 'url'=>'./testsubmit.php?trade_no='.$trade_no];
+	exit(json_encode($result));
+break;
+
+case 'getWeixin':
+	$id=intval($_GET['id']);
+	$row=$DB->getRow("select * from pre_weixin where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前公众号/小程序不存在！"}');
+	$result = ['code'=>0,'msg'=>'succ','data'=>$row];
+	exit(json_encode($result));
+break;
+case 'delWeixin':
+	$id=intval($_GET['id']);
+	$row=$DB->getRow("select * from pre_weixin where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前公众号/小程序不存在！"}');
+	$row=$DB->getRow("select * from pre_channel where appwxmp=:id limit 1", [':id'=>$id]);
+	if($row)
+		exit('{"code":-1,"msg":"删除失败，存在使用该微信公众号的支付通道"}');
+	$row=$DB->getRow("select * from pre_channel where appwxa=:id limit 1", [':id'=>$id]);
+	if($row)
+		exit('{"code":-1,"msg":"删除失败，存在使用该微信小程序的支付通道"}');
+	if($DB->delete('weixin', ['id'=>$id])){
+		exit('{"code":0,"msg":"删除公众号/小程序成功！"}');
+	}else exit('{"code":-1,"msg":"删除公众号/小程序失败['.$DB->error().']"}');
+break;
+case 'saveWeixin':
+	if($_POST['action'] == 'add'){
+		$type=intval($_POST['type']);
+		$name=trim($_POST['name']);
+		$appid=trim($_POST['appid']);
+		$appsecret=trim($_POST['appsecret']);
+		$row=$DB->getRow("select * from pre_weixin where name=:name limit 1", [':name'=>$name]);
+		if($row)
+			exit('{"code":-1,"msg":"名称重复"}');
+		$row=$DB->getRow("select * from pre_weixin where appid=:appid limit 1", [':appid'=>$appid]);
+		if($row)
+			exit('{"code":-1,"msg":"APPID重复"}');
+		if($DB->insert('weixin', ['type'=>$type, 'name'=>$name, 'appid'=>$appid, 'appsecret'=>$appsecret, 'status'=>1, 'addtime'=>'NOW()']))exit('{"code":0,"msg":"新增公众号/小程序成功！"}');
+		else exit('{"code":-1,"msg":"新增公众号/小程序失败['.$DB->error().']"}');
+	}else{
+		$id=intval($_POST['id']);
+		$type=intval($_POST['type']);
+		$name=trim($_POST['name']);
+		$appid=trim($_POST['appid']);
+		$appsecret=trim($_POST['appsecret']);
+		$row=$DB->getRow("select * from pre_weixin where name=:name and id<>:id limit 1", [':name'=>$name, ':id'=>$id]);
+		if($row)
+			exit('{"code":-1,"msg":"名称重复"}');
+		$row=$DB->getRow("select * from pre_weixin where appid=:appid and id<>:id limit 1", [':appid'=>$appid, ':id'=>$id]);
+		if($row)
+			exit('{"code":-1,"msg":"APPID重复"}');
+		if($DB->update('weixin', ['type'=>$type, 'name'=>$name, 'appid'=>$appid, 'appsecret'=>$appsecret], ['id'=>$id])!==false)exit('{"code":0,"msg":"修改公众号/小程序成功！"}');
+		else exit('{"code":-1,"msg":"修改公众号/小程序失败['.$DB->error().']"}');
+	}
+break;
+case 'testweixin':
+	$id=intval($_POST['id']);
+	$row=$DB->getRow("select * from pre_weixin where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前公众号/小程序不存在！"}');
+	try{
+		$wechat = new \lib\wechat\WechatAPI($id);
+		$access_token = $wechat->getAccessToken(true);
+	}catch(Exception $e){
+		exit('{"code":-1,"msg":"'.$e->getMessage().'"}');
+	}
+	exit('{"code":0,"msg":"接口连接测试成功！"}');
+break;
+
+case 'getWework':
+	$id=intval($_GET['id']);
+	$row=$DB->getRow("select * from pre_wework where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前企业微信不存在！"}');
+	$result = ['code'=>0,'msg'=>'succ','data'=>$row];
+	exit(json_encode($result));
+break;
+case 'setWework':
+	$id=intval($_GET['id']);
+	$status=intval($_GET['status']);
+	$row=$DB->getRow("select * from pre_wework where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前企业微信不存在！"}');
+	if($DB->exec("UPDATE pre_wework SET status=:status WHERE id=:id", [':status'=>$status, ':id'=>$id]))exit('{"code":0,"msg":"修改企业微信成功！"}');
+	else exit('{"code":-1,"msg":"修改企业微信失败['.$DB->error().']"}');
+break;
+case 'delWework':
+	$id=intval($_GET['id']);
+	$row=$DB->getRow("select * from pre_wework where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前企业微信不存在！"}');
+	if($DB->delete('wework', ['id'=>$id])){
+		$DB->delete('wxkfaccount', ['wid'=>$id]);
+		exit('{"code":0,"msg":"删除企业微信成功！"}');
+	}else exit('{"code":-1,"msg":"删除企业微信失败['.$DB->error().']"}');
+break;
+case 'saveWework':
+	if($_POST['action'] == 'add'){
+		$name=trim($_POST['name']);
+		$appid=trim($_POST['appid']);
+		$appsecret=trim($_POST['appsecret']);
+		$row=$DB->getRow("select * from pre_wework where name=:name limit 1", [':name'=>$name]);
+		if($row)
+			exit('{"code":-1,"msg":"名称重复"}');
+		$row=$DB->getRow("select * from pre_wework where appid=:appid limit 1", [':appid'=>$appid]);
+		if($row)
+			exit('{"code":-1,"msg":"企业ID重复"}');
+		if($DB->insert('wework', ['name'=>$name, 'appid'=>$appid, 'appsecret'=>$appsecret, 'status'=>1, 'addtime'=>'NOW()']))exit('{"code":0,"msg":"新增企业微信成功！请点击刷新客服账号数量"}');
+		else exit('{"code":-1,"msg":"新增企业微信失败['.$DB->error().']"}');
+	}else{
+		$id=intval($_POST['id']);
+		$name=trim($_POST['name']);
+		$appid=trim($_POST['appid']);
+		$appsecret=trim($_POST['appsecret']);
+		$row=$DB->getRow("select * from pre_wework where name=:name and id<>:id limit 1", [':name'=>$name, ':id'=>$id]);
+		if($row)
+			exit('{"code":-1,"msg":"名称重复"}');
+		$row=$DB->getRow("select * from pre_wework where appid=:appid and id<>:id limit 1", [':appid'=>$appid, ':id'=>$id]);
+		if($row)
+			exit('{"code":-1,"msg":"企业ID重复"}');
+		if($DB->update('wework', ['name'=>$name, 'appid'=>$appid, 'appsecret'=>$appsecret], ['id'=>$id])!==false)exit('{"code":0,"msg":"修改企业微信成功！"}');
+		else exit('{"code":-1,"msg":"修改企业微信失败['.$DB->error().']"}');
+	}
+break;
+case 'refreshWework':
+	$id=intval($_POST['id']);
+	$row=$DB->getRow("select * from pre_wework where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前企业微信不存在！"}');
+	$wework = new \lib\wechat\WeWorkAPI($id);
+	try{
+		$account_list = $wework->getKFList();
+		if(count($account_list) == 0){
+			exit('{"code":-1,"msg":"没有添加客服账号"}');
+		}
+		$account_data = $DB->findAll('wxkfaccount', 'id,openkfid', ['wid'=>$id]);
+		foreach($account_list as $account){
+			$isExsist = false;
+			foreach($account_data as $find){
+				if($find['openkfid'] == $account['open_kfid']){
+					$isExsist = true;break;
+				}
+			}
+			if(!$isExsist){
+				$DB->insert('wxkfaccount', ['wid'=>$id, 'openkfid'=>$account['open_kfid'], 'name'=>$account['name'], 'addtime'=>'NOW()']);
+			}
+		}
+		foreach($account_data as $account){
+			$isExsist = false;
+			foreach($account_list as $find){
+				if($find['open_kfid'] == $account['openkfid']){
+					$isExsist = true;break;
+				}
+			}
+			if(!$isExsist){
+				$DB->delete('wxkfaccount', ['id'=>$account['id']]);
+			}
+		}
+		exit(json_encode(['code'=>0, 'msg'=>'成功获取到'.count($account_list).'个客服账号']));
+	}catch(Exception $e){
+		exit('{"code":-1,"msg":"'.$e->getMessage().'"}');
+	}
+break;
+case 'testWework':
+	$id=intval($_POST['id']);
+	$row=$DB->getRow("select * from pre_wework where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前企业微信不存在！"}');
+	$wework = new \lib\wechat\WeWorkAPI($id);
+	try{
+		$access_token = $wework->getAccessToken(true);
+	}catch(Exception $e){
+		exit('{"code":-1,"msg":"'.$e->getMessage().'"}');
+	}
+	exit('{"code":0,"msg":"接口连接测试成功！"}');
+break;
+
+default:
+	exit('{"code":-4,"msg":"No Act"}');
+break;
+}

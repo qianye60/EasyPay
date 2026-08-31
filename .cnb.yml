@@ -1,0 +1,80 @@
+# 矩阵构建: AMD64 + ARM64 分别构建，合并为多架构镜像
+# 触发方式: 手动触发 (Web UI)，输入版本号 (默认 latest)
+# 策略: 只推送 :latest-linux-* 中间产物，manifest 同时生成 :latest + :v版本号
+
+"**":
+  web_trigger_build:
+    # AMD64架构的构建任务
+    - runner:
+        tags: cnb:arch:amd64
+      services:
+        - docker
+      env:
+        IMAGE_LATEST: ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest-linux-amd64
+      stages:
+        - name: docker login
+          script: docker login -u ${CNB_TOKEN_USER_NAME} -p "${CNB_TOKEN}" ${CNB_DOCKER_REGISTRY}
+        - name: docker build (AMD64)
+          script: |
+            docker buildx build --platform linux/amd64 --provenance=false \
+              --tag ${IMAGE_LATEST} --push .
+        - name: resolve
+          type: cnb:resolve
+          options:
+            key: build-amd64
+    
+    # ARM64架构的构建任务
+    - runner:
+        tags: cnb:arch:arm64:v8
+      services:
+        - docker
+      env:
+        IMAGE_LATEST: ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest-linux-arm64
+      stages:
+        - name: docker login
+          script: docker login -u ${CNB_TOKEN_USER_NAME} -p "${CNB_TOKEN}" ${CNB_DOCKER_REGISTRY}
+        - name: docker build (ARM64)
+          script: |
+            docker buildx build --platform linux/arm64 --provenance=false \
+              --tag ${IMAGE_LATEST} --push .
+        - name: resolve
+          type: cnb:resolve
+          options:
+            key: build-arm64
+
+    # 创建多架构镜像 (latest + version)
+    - services:
+        - docker
+      env:
+        REGISTRY: ${CNB_DOCKER_REGISTRY}
+        REPO: ${CNB_REPO_SLUG_LOWERCASE}
+        TAG_VER: ${VERSION}
+      stages:
+        - name: await the amd64
+          type: cnb:await
+          options:
+            key: build-amd64
+        - name: await the arm64
+          type: cnb:await
+          options:
+            key: build-arm64
+        - name: manifest (latest)
+          image: plugins/manifest
+          settings:
+            username: $CNB_TOKEN_USER_NAME
+            password: $CNB_TOKEN
+            target: ${REGISTRY}/${REPO}:latest
+            template: ${REGISTRY}/${REPO}:latest-OS-ARCH
+            platforms:
+              - linux/amd64
+              - linux/arm64
+        - name: manifest (version)
+          image: plugins/manifest
+          settings:
+            username: $CNB_TOKEN_USER_NAME
+            password: $CNB_TOKEN
+            target: ${REGISTRY}/${REPO}:${TAG_VER}
+            template: ${REGISTRY}/${REPO}:latest-OS-ARCH
+            platforms:
+              - linux/amd64
+              - linux/arm64

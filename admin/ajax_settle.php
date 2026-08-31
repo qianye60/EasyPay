@@ -1,0 +1,250 @@
+<?php
+include("../includes/common.php");
+if($islogin==1){}else exit("<script language='javascript'>window.location.href='./login.php';</script>");
+$act=isset($_GET['act'])?daddslashes($_GET['act']):null;
+
+if(!checkRefererHost())exit('{"code":403}');
+if($_SERVER['REQUEST_METHOD']==='POST' && (!isset($_POST['csrf_token']) || $_POST['csrf_token']!==$_SESSION['admin_csrf_token'])) exit('{"code":403,"msg":"CSRF验证失败"}');
+
+@header('Content-Type: application/json; charset=UTF-8');
+
+switch($act){
+case 'settleList':
+	$conditions = ["1=1"];
+	$params = [];
+	if(isset($_POST['batch']) && !empty($_POST['batch'])) {
+		$conditions[] = "`batch`=:f_batch";
+		$params[':f_batch'] = trim($_POST['batch']);
+	}
+	if(isset($_POST['uid']) && !empty($_POST['uid'])) {
+		$conditions[] = "`uid`=:f_uid";
+		$params[':f_uid'] = intval($_POST['uid']);
+	}
+	if(isset($_POST['type']) && !empty($_POST['type'])) {
+		$conditions[] = "`type`=:f_type";
+		$params[':f_type'] = intval($_POST['type']);
+	}
+	if(isset($_POST['dstatus']) && $_POST['dstatus']>-1) {
+		$conditions[] = "`status`=:f_dstatus";
+		$params[':f_dstatus'] = intval($_POST['dstatus']);
+	}
+	if(isset($_POST['value']) && !empty($_POST['value'])) {
+		$conditions[] = "(`account` like :f_value_like OR `username` like :f_value_like)";
+		$params[':f_value_like'] = '%'.trim($_POST['value']).'%';
+	}
+	$where = implode(' AND ', $conditions);
+	$offset = intval($_POST['offset']);
+	$limit = intval($_POST['limit']);
+	$total = $DB->getColumn("SELECT count(*) from pre_settle WHERE {$where}", $params);
+	$list = $DB->getAll("SELECT * FROM pre_settle WHERE {$where} order by id desc limit {$offset},{$limit}", $params);
+	$list2 = [];
+	foreach($list as $row){
+		if($row['type'] == 2 && $row['status'] == 1 && !empty($row['transfer_ext']) && time() - strtotime($row['transfer_date']) <= 86400){
+			if(substr($row['ext'], 0, 4) == 'http'){
+				$row['jumpurl'] = $row['ext'];
+			}else{
+				$row['jumpurl'] = $siteurl.'paypage/wxtrans.php?id='.$row['id'].'&type=settle';
+			}
+		}
+		$list2[] = $row;
+	}
+
+	exit(json_encode(['total'=>$total, 'rows'=>$list2]));
+break;
+
+case 'create_batch':
+	$count=$DB->getColumn("SELECT count(*) from pre_settle where status=0");
+	if($count==0)exit('{"code":-1,"msg":"当前不存在待结算的记录"}');
+	$batch=date("Ymd").rand(111,999);
+	$allmoney = 0;
+	$rs=$DB->query("SELECT * from pre_settle where status=0");
+	while($row = $rs->fetch())
+	{
+		$DB->exec("UPDATE pre_settle SET batch=:batch,status=2 WHERE id=:id", [':batch'=>$batch, ':id'=>$row['id']]);
+		$allmoney+=$row['realmoney'];
+	}
+	$DB->insert('batch', ['batch'=>$batch, 'allmoney'=>$allmoney, 'count'=>$count, 'time'=>'NOW()', 'status'=>0]);
+
+	exit(json_encode(['code'=>0, 'msg'=>'succ', 'batch'=>$batch, 'count'=>$count, 'allmoney'=>$allmoney]));
+break;
+case 'complete_batch':
+	$batch=trim($_POST['batch']);
+	$DB->exec("UPDATE pre_settle SET status=1 WHERE batch=:batch", [':batch'=>$batch]);
+	exit('{"code":0,"msg":"succ"}');
+break;
+case 'setSettleStatus':
+	$id=intval($_GET['id']);
+	$status=intval($_GET['status']);
+	if($status==4){
+		$row = $DB->find('settle', 'uid,money', ['id'=>$id]);
+		if(!$row) exit('{"code":200}');
+		if($DB->exec("DELETE FROM pre_settle WHERE id=:id", [':id'=>$id])){
+			changeUserMoney($row['uid'], $row['money'], true, '结算失败退回');
+			exit('{"code":200}');
+		}
+		else{
+			exit('{"code":400,"msg":"删除记录失败！['.$DB->error().']"}');
+		}
+	}else{
+		if($status==1){
+			$row = $DB->find('settle', 'uid,money,realmoney,account', ['id'=>$id]);
+			if($DB->exec("update pre_settle set status=:status,endtime=:endtime,result=NULL where id=:id", [':status'=>$status, ':endtime'=>$date, ':id'=>$id])!==false){
+				\lib\MsgNotice::send('settle', $row['uid'], ['money'=>$row['money'], 'realmoney'=>$row['realmoney'], 'time'=>date('Y-m-d H:i:s'), 'account'=>$row['account']]);
+				exit('{"code":200}');
+			}else{
+				exit('{"code":400,"msg":"修改记录失败！['.$DB->error().']"}');
+			}
+		}else{
+			if($DB->exec("update pre_settle set status=:status,endtime=NULL where id=:id", [':status'=>$status, ':id'=>$id])!==false)
+				exit('{"code":200}');
+			else
+				exit('{"code":400,"msg":"修改记录失败！['.$DB->error().']"}');
+		}
+	}
+break;
+case 'opslist':
+	$status=intval($_POST['status']);
+	$checkbox=$_POST['checkbox'];
+	$i=0;
+	foreach($checkbox as $id){
+		if($status==4){
+			$DB->exec("DELETE FROM pre_settle WHERE id=:id", [':id'=>$id]);
+		}elseif($status==1){
+			$DB->exec("update pre_settle set status=:status,endtime=:endtime,result=NULL where id=:id", [':status'=>$status, ':endtime'=>$date, ':id'=>$id]);
+		}else{
+			$DB->exec("update pre_settle set status=:status,endtime=NULL where id=:id", [':status'=>$status, ':id'=>$id]);
+		}
+		$i++;
+	}
+	exit('{"code":0,"msg":"成功改变'.$i.'条记录状态"}');
+break;
+case 'settle_result':
+	$id=intval($_POST['id']);
+	$row=$DB->getRow("select result from pre_settle where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前结算记录不存在！"}');
+	$result = ['code'=>0,'msg'=>'succ','result'=>$row['result']];
+	exit(json_encode($result));
+break;
+case 'settle_setresult':
+	$id=intval($_POST['id']);
+	$result=trim($_POST['result']);
+	$row=$DB->getRow("select * from pre_settle where id=:id limit 1", [':id'=>$id]);
+	if(!$row)
+		exit('{"code":-1,"msg":"当前结算记录不存在！"}');
+	$sds = $DB->exec("UPDATE pre_settle SET result=:result WHERE id=:id", [':result'=>$result, ':id'=>$id]);
+	if($sds!==false)
+		exit('{"code":0,"msg":"修改成功！"}');
+	else
+		exit('{"code":-1,"msg":"修改失败！'.$DB->error().'"}');
+break;
+case 'settle_info':
+	$id=intval($_GET['id']);
+	$rows=$DB->getRow("select * from pre_settle where id=:id limit 1", [':id'=>$id]);
+	if(!$rows)
+		exit('{"code":-1,"msg":"当前结算记录不存在！"}');
+	$types = [];
+	if($conf['settle_alipay']) $types[] = ['value'=>'1','label'=>'支付宝'];
+	if($conf['settle_wxpay']) $types[] = ['value'=>'2','label'=>'微信'];
+	if($conf['settle_qqpay']) $types[] = ['value'=>'3','label'=>'QQ钱包'];
+	if($conf['settle_bank']) $types[] = ['value'=>'4','label'=>'银行卡'];
+	$result = ['code'=>0,'msg'=>'succ','data'=>['id'=>$id,'fields'=>[
+		['key'=>'pay_type','label'=>'结算方式','type'=>'select','value'=>(string)$rows['type'],'options'=>$types],
+		['key'=>'pay_account','label'=>'结算账号','type'=>'text','value'=>(string)$rows['account'],'required'=>true],
+		['key'=>'pay_name','label'=>'真实姓名','type'=>'text','value'=>(string)$rows['username'],'required'=>true],
+	]],'pay_type'=>$rows['type']];
+	exit(json_encode($result));
+break;
+case 'settle_save':
+	$id=intval($_POST['id']);
+	$pay_type=intval($_POST['pay_type']);
+	$pay_account=htmlspecialchars(trim($_POST['pay_account']));
+	$pay_name=htmlspecialchars(trim($_POST['pay_name']));
+	$data = ['type'=>$pay_type, 'account'=>$pay_account, 'username'=>$pay_name];
+	if($DB->update('settle', $data, ['id'=>$id])!==false)
+		exit('{"code":0,"msg":"修改记录成功！"}');
+	else
+		exit('{"code":-1,"msg":"修改记录失败！'.$DB->error().'"}');
+break;
+case 'paypwd_check':
+	if(isset($_SESSION['paypwd']) && $_SESSION['paypwd']==$conf['admin_paypwd'])
+		exit('{"code":0,"msg":"ok"}');
+	else
+		exit('{"code":-1,"msg":"error"}');
+break;
+case 'paypwd_input':
+	$paypwd=trim($_POST['paypwd']);
+	if(!$conf['admin_paypwd'])exit('{"code":-1,"msg":"你还未设置支付密码"}');
+	if($paypwd == $conf['admin_paypwd']){
+		$_SESSION['paypwd'] = $paypwd;
+		exit('{"code":0,"msg":"ok"}');
+	}else{
+		exit('{"code":-1,"msg":"支付密码错误！"}');
+	}
+break;
+case 'paypwd_reset':
+	unset($_SESSION['paypwd']);
+	exit('{"code":0,"msg":"ok"}');
+break;
+
+case 'transfer':
+	if(isset($_POST['paypwd']) && hash_equals((string)$conf['admin_paypwd'], (string)$_POST['paypwd'])) $_SESSION['paypwd'] = $_POST['paypwd'];
+	$id = isset($_POST['id'])?intval($_POST['id']):exit('{"code":-1,"msg":"ID不能为空"}');
+	$type = isset($_POST['type'])?intval($_POST['type']):exit('{"code":-1,"msg":"type不能为空"}');
+	$channelid = isset($_POST['channel'])?intval($_POST['channel']):0;
+
+	if(!isset($_SESSION['paypwd']) || $_SESSION['paypwd']!==$conf['admin_paypwd'])exit('{"code":-1,"msg":"支付密码错误，请返回重新进入该页面"}');
+
+	$row=$DB->getRow("SELECT * FROM pre_settle WHERE id=:id limit 1", [':id'=>$id]);
+	if(!$row)exit('{"code":-1,"msg":"记录不存在"}');
+	if($row['type']!=$type)exit('{"code":-1,"msg":"转账类型不正确"}');
+
+	if($row['transfer_status']==1)exit('{"code":0,"ret":2,"result":"转账订单号:'.$row['transfer_result'].' 支付时间:'.$row['transfer_date'].'"}');
+
+	if($type == 1){
+		$app = 'alipay';
+	}elseif($type == 2){
+		$app = 'wxpay';
+	}elseif($type == 3){
+		$app = 'qqpay';
+	}elseif($type == 4){
+		$app = 'bank';
+	}
+	$channel = \lib\Channel::get($channelid);
+	if(!$channel)exit('{"code":-1,"msg":"当前支付通道信息不存在"}');
+
+	$out_biz_no = date("YmdHis").str_pad($id, 5, '0', STR_PAD_LEFT);
+	$result = \lib\Transfer::submit($app, $channel, $out_biz_no, $row['account'], $row['username'], $row['realmoney']);
+
+	if($result['code']==0){
+		$data['code']=0;
+		$data['ret']=1;
+		$data['result']='转账订单号:'.$result['orderid'].' 支付时间:'.$result['paydate'];
+		$update = ['status'=>1, 'endtime'=>'NOW()', 'transfer_no'=>$out_biz_no, 'transfer_channel'=>$channelid, 'transfer_status'=>1, 'transfer_result'=>$result["orderid"], 'transfer_date'=>$result["paydate"]];
+		if(isset($result['wxpackage'])) $update['transfer_ext'] = $result['wxpackage'];
+		$DB->update('settle', $update, ['id'=>$id]);
+
+		if(isset($result['wxpackage'])) {
+			$jumpurl = $siteurl.'paypage/wxtrans.php?type=settle&id='.$id;
+			\lib\MsgNotice::send('settle', $row['uid'], ['money'=>$row['money'], 'realmoney'=>$row['realmoney'], 'time'=>date('Y-m-d H:i:s'), 'account'=>$row['account'], 'jumpurl'=>$jumpurl]);
+		}else{
+			\lib\MsgNotice::send('settle', $row['uid'], ['money'=>$row['money'], 'realmoney'=>$row['realmoney'], 'time'=>date('Y-m-d H:i:s'), 'account'=>$row['account']]);
+		}
+	} else {
+		if(in_array($result['errcode'], \lib\Transfer::$payee_err_code)){
+			$data['code']=0;
+			$data['ret']=0;
+			$data['result']='转账失败 '.$result['msg'];
+			$DB->update('settle', ['status'=>3, 'result'=>$result["msg"], 'transfer_status'=>2, 'transfer_result'=>$data['result']], ['id'=>$id]);
+		}else{
+			$data['code']=-1;
+			$data['msg']=$result['msg'];
+		}
+	}
+	exit(json_encode($data));
+break;
+
+default:
+	exit('{"code":-4,"msg":"No Act"}');
+break;
+}

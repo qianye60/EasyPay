@@ -1,0 +1,16 @@
+/.env
+/config.php
+/install/install.lock
+cache/
+*.log
+lakala_log.txt
+gateway.txt
+.DS_Store
+Thumbs.db
+
+# Claude Code / skill 工具链安装产物（非项目代码）
+/.agents/skills/
+/.claude/skills/
+/skills-lock.json
+# Local Pi runtime state
+.atl/
