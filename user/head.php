@@ -237,7 +237,7 @@ $epay_ui_ver = @filemtime(ROOT.'assets/dist/epay-ui.css') ?: time();
 			  <li class="<?php echo checkIfActive('groupbuy')?>">
                 <a href="groupbuy.php">
                   <i class="glyphicon glyphicon-shopping-cart"></i>
-                  <span>购买会员</span>
+                  <span>套餐购买</span>
                 </a>
               </li>
 			  <?php }?>
