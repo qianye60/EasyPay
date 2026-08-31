@@ -48,6 +48,26 @@ if($act === 'testorder'){
 	if(!$ok) exit('{"code":-1,"msg":"创建订单失败"}');
 	exit(json_encode(['code'=>0,'msg'=>'ok','url'=>'/submit2.php?typeid='.$typeid.'&trade_no='.$trade_no], JSON_UNESCAPED_UNICODE));
 }
+if($act === 'simulatePush'){
+	global $siteurl;
+	$type = trim($_POST['type'] ?? '');
+	$money = trim($_POST['money'] ?? '0.01');
+	$vmqType = ['wxpay'=>1,'alipay'=>2,'qqpay'=>4][$type] ?? 0;
+	if(!$vmqType) exit('{"code":-1,"msg":"通道不存在"}');
+	if($money === '' || !is_numeric($money) || $money <= 0 || !preg_match('/^[0-9]+(\.[0-9]{1,2})?$/', $money)) exit('{"code":-1,"msg":"金额不合法"}');
+	$money = sprintf('%.2f', round((float)$money, 2));
+	$key = GuajiHelper::softKey($uid);
+	if($key === '') exit('{"code":-1,"msg":"未配置通讯密钥"}');
+	$t = (string)(int)round(microtime(true) * 1000);
+	$sign = md5($vmqType.$money.$t.$key);
+	// 容器内走 nginx 服务名，避免公网回环失败
+	$url = 'http://nginx/appPush?t='.urlencode($t).'&type='.$vmqType.'&price='.urlencode($money).'&sign='.$sign;
+	$resp = get_curl($url);
+	$json = json_decode((string)$resp, true);
+	if(!is_array($json)) exit(json_encode(['code'=>-1,'msg'=>'模拟推送无响应（请确认已有同金额待支付订单）：'.substr((string)$resp,0,120)], JSON_UNESCAPED_UNICODE));
+	$ok = intval($json['code'] ?? -1) === 1;
+	exit(json_encode(['code'=>$ok?0:-1,'msg'=>$ok?('模拟推送成功：'.$json['msg']):('模拟推送失败：'.($json['msg']??'unknown')),'raw'=>$json], JSON_UNESCAPED_UNICODE));
+}
 
 $field = trim($_POST['field'] ?? '');
 if(!in_array($field, ['wx_qr','ali_qr','qq_qr'], true)) exit('{"code":-1,"msg":"类型错误"}');
@@ -62,14 +82,22 @@ $dir = ROOT.$dirRel;
 if(!is_dir($dir) && !mkdir($dir, 0755, true)) exit('{"code":-1,"msg":"无法创建上传目录"}');
 $name = $uid.'_'.$field.'.'.$mimeMap[$info['mime']];
 $dest = $dir.'/'.$name;
-if(!move_uploaded_file($_FILES['file']['tmp_name'], $dest)) exit('{"code":-1,"msg":"保存失败"}');
+$tmp = $dest.'.upload.'.bin2hex(random_bytes(6));
+if(!move_uploaded_file($_FILES['file']['tmp_name'], $tmp)) exit('{"code":-1,"msg":"保存失败"}');
 $rel = $dirRel.'/'.$name;
 $typename = $field === 'wx_qr' ? 'wxpay' : ($field === 'ali_qr' ? 'alipay' : 'qqpay');
-$payload = GuajiHelper::decodeQrFile($dest);
+$payload = GuajiHelper::decodeQrFile($tmp);
 if(!$payload){
-	@unlink($dest);
+	@unlink($tmp);
 	exit('{"code":-1,"msg":"无法识别二维码，请上传清晰、完整的收款码原图"}');
+}
+if(!rename($tmp, $dest)){
+	@unlink($tmp);
+	exit('{"code":-1,"msg":"替换旧收款码失败"}');
+}
+foreach((array)glob($dir.'/'.$uid.'_'.$field.'.*') as $oldFile){
+	if($oldFile !== $dest && is_file($oldFile)) @unlink($oldFile);
 }
 if(!GuajiHelper::saveQr($uid, $field, $rel)) exit('{"code":-1,"msg":"写入失败"}');
 GuajiHelper::savePayload($uid, $typename, $payload);
-exit(json_encode(['code'=>0,'msg'=>'上传成功，已解析为收款码','url'=>'/'.$rel], JSON_UNESCAPED_UNICODE));
+exit(json_encode(['code'=>0,'msg'=>'收款码已重新上传并解析成功','url'=>'/'.$rel.'?v='.time()], JSON_UNESCAPED_UNICODE));

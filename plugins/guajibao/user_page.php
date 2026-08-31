@@ -14,7 +14,7 @@ $lastHeart = !empty($row['last_heart']) ? $row['last_heart'] : '无';
 $lastPush = !empty($row['last_push']) ? $row['last_push'].' '.($row['last_push_note'] ?? '') : '无（付款后监控端要把到账通知推上来）';
 $channels = [
 	['type'=>'wxpay', 'qr'=>'wx_qr', 'on'=>'wx_on', 'name'=>'微信支付', 'note'=>'上传清晰的微信收款码。系统会解析出码内容并重新生成点位图，不会直接展示原图。'],
-	['type'=>'alipay', 'qr'=>'ali_qr', 'on'=>'ali_on', 'name'=>'支付宝', 'note'=>'上传清晰的支付宝收款码。系统会解析出码内容并重新生成点位图，不会直接展示原图。'],
+	['type'=>'alipay', 'qr'=>'ali_qr', 'on'=>'ali_on', 'name'=>'支付宝', 'note'=>'上传清晰的支付宝收款码。官方 V免签只认通知文案含「通过扫码向你付款」或「成功收款」；文案变了就不会推送。'],
 	['type'=>'qqpay', 'qr'=>'qq_qr', 'on'=>'qq_on', 'name'=>'QQ钱包', 'note'=>'上传清晰的 QQ 收款码。官方 V免签 APP 不听 QQ 通知，需挂机宝等能推 QQ 到账的监控端。'],
 ];
 ?>
@@ -37,6 +37,7 @@ $channels = [
 .gjb-dot{width:9px;height:9px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 5px rgba(34,197,94,.13)}
 .gjb-status.offline .gjb-dot{background:#94a3b8;box-shadow:0 0 0 5px rgba(148,163,184,.15)}
 .gjb-status-meta{margin-top:22px;color:#64748b;font-size:12px;line-height:1.8}
+.gjb-status-push{margin-top:14px;padding-top:12px;border-top:1px solid rgba(148,163,184,.22);color:#64748b;font-size:12px;line-height:1.6}.gjb-status-push strong{display:block;color:#334155;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gjb-status .btn{margin-top:14px;border-radius:8px;padding:7px 12px}
 .gjb-fields{display:grid;grid-template-columns:1fr 1fr;gap:18px 22px}
 .gjb-field{min-width:0}.gjb-field-wide{grid-column:1/-1}
@@ -51,6 +52,7 @@ $channels = [
 .gjb-testbar{display:flex;align-items:center;gap:12px;padding:18px 24px;background:#f8fafc;border-bottom:1px solid #edf1f5}
 .gjb-testbar label{margin:0;font-size:13px;font-weight:600;color:#475569}.gjb-testbar .input-group{width:170px}.gjb-testbar .form-control{height:38px;box-shadow:none;border-color:#dbe3ec}.gjb-testbar .input-group-addon{background:#fff;border-color:#dbe3ec;color:#64748b}.gjb-testbar .help-block{margin:0;color:#94a3b8;font-size:12px}
 .gjb-channels{padding:0 24px 24px}.gjb-channel{display:grid;grid-template-columns:minmax(230px,1.5fr) 110px 86px minmax(250px,1fr);gap:18px;align-items:center;padding:20px 0;border-bottom:1px solid #edf1f5}.gjb-channel:last-child{border-bottom:0;padding-bottom:0}
+.gjb-channel{transition:background .18s ease}.gjb-channel:hover{background:#fbfdff}.gjb-field .form-control:focus{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(59,130,246,.10)}.gjb-actions .btn:focus,.gjb-status .btn:focus{box-shadow:0 0 0 3px rgba(59,130,246,.16);outline:0}
 .gjb-channel-name{font-size:15px;font-weight:700;color:#1e293b;margin-bottom:6px}.gjb-channel-note{font-size:12px;line-height:1.6;color:#94a3b8;max-width:330px}
 .gjb-qr-thumb{width:76px;height:76px;object-fit:cover;border:1px solid #e2e8f0;border-radius:9px;background:#f8fafc}.gjb-empty{display:flex;align-items:center;justify-content:center;width:76px;height:76px;border:1px dashed #cbd5e1;border-radius:9px;color:#94a3b8;font-size:12px}
 .gjb-badge{display:inline-flex;align-items:center;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:600}.gjb-badge.on{background:#dcfce7;color:#15803d}.gjb-badge.off{background:#f1f5f9;color:#64748b}
@@ -70,6 +72,7 @@ $channels = [
             <div class="gjb-status-label">软件状态</div>
             <div class="gjb-status-value"><i class="gjb-dot"></i><?php echo $online ? '在线' : '离线'?></div>
             <div class="gjb-status-meta">最后心跳<br><strong><?php echo h($lastHeart)?></strong></div>
+            <div class="gjb-status-push">最近收款推送<strong title="<?php echo h($lastPush)?>"><?php echo h($lastPush)?></strong></div>
             <a href="softdown.php" class="btn btn-success btn-sm">软件下载</a>
           </div>
           <div class="gjb-fields">
@@ -96,6 +99,7 @@ $channels = [
                   <label class="btn btn-xs btn-info gjb-upload-button" data-label="<?php echo $src ? '重新上传' : '上传收款码'?>"><span><?php echo $src ? '重新上传' : '上传收款码'?></span><input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-field="<?php echo $ch['qr']?>" class="gjb-file" style="display:none"></label>
                   <button type="button" class="btn btn-xs btn-<?php echo $on?'warning':'success'?>" onclick="toggleCh('<?php echo $ch['type']?>',<?php echo $on?0:1?>)"><?php echo $on?'关闭':'开启'?></button>
                   <button type="button" class="btn btn-xs btn-primary" onclick="testOrder('<?php echo $ch['type']?>')">测试订单</button>
+                  <button type="button" class="btn btn-xs btn-default" onclick="simulatePush('<?php echo $ch['type']?>')">模拟推送</button>
                 </div>
               </div>
 <?php } ?>
@@ -139,6 +143,15 @@ function testOrder(type){
   postAct({act:'testorder', type:type, money:money}, function(d){
     if(d.code===0 && d.url){ window.open(d.url, '_blank'); }
     else { alert(d.msg||'无法创建测试订单'); }
+  });
+}
+function simulatePush(type){
+  var money = (document.getElementById('gjb-test-money').value || '').trim();
+  if(!money){ alert('请填写测试金额'); return; }
+  if(!confirm('将模拟监控 APP 的到账推送（不经过手机）。请先用「测试订单」开一笔同金额待支付单。')) return;
+  postAct({act:'simulatePush', type:type, money:money}, function(d){
+    alert(d.msg||'完成');
+    if(d.code===0) location.reload();
   });
 }
 (function(){
