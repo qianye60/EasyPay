@@ -69,6 +69,14 @@ import {
   TestPaymentView,
   type TestPaymentConfig,
 } from "@/components/epay/test-payment"
+import {
+  MerchantOnecodeView,
+  type OnecodeConfig,
+} from "@/components/epay/merchant-onecode"
+import {
+  MerchantPlansView,
+  type MerchantPlansConfig,
+} from "@/components/epay/merchant-plans"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -140,6 +148,8 @@ type EpayView =
   | "admin-roll-config"
   | "admin-shell"
   | "merchant-dashboard"
+  | "merchant-onecode"
+  | "merchant-plans"
   | "soft-download"
   | "merchant-shell"
   | "cashier"
@@ -324,7 +334,7 @@ const merchantNav: NavItem[] = [
   },
   {
     section: "套餐",
-    label: "监听套餐",
+    label: "套餐购买",
     href: "./groupbuy.php",
     icon: PackageCheck,
     feature: "groupbuy",
@@ -504,27 +514,32 @@ function Brand({
   role?: string
 }) {
   return (
-    <div className={cn("flex min-w-0 items-center", compact ? "justify-center" : "gap-3")}>
-      <div className="relative flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-primary via-primary/90 to-primary/75 text-primary-foreground shadow-sm shadow-primary/25 ring-1 ring-white/20 transition-transform duration-200 hover:scale-105">
-        <Zap className="size-4.5" aria-hidden="true" />
+    <div
+      className={cn(
+        "flex min-w-0 items-center",
+        compact ? "justify-center" : "gap-2.5"
+      )}
+    >
+      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+        <Zap className="size-4" aria-hidden="true" />
       </div>
       {!compact && (
-        <div className="min-w-0 flex-1 leading-tight">
+        <div className="min-w-0 leading-none">
           <div className="flex items-center gap-1.5">
-            <span className="truncate font-bold tracking-tight text-foreground text-sm">
+            <span className="truncate text-sm font-semibold tracking-tight text-foreground">
               {name}
             </span>
-            {role && (
-              <span className="inline-flex shrink-0 items-center rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary dark:bg-primary/20 border border-primary/15">
+            {role ? (
+              <span className="inline-flex shrink-0 items-center rounded-md border border-border bg-muted/70 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                 {role}
               </span>
-            )}
+            ) : null}
           </div>
-          {subtitle && (
-            <p className="mt-0.5 truncate text-[11px] font-normal text-muted-foreground/80">
+          {subtitle ? (
+            <p className="mt-1 truncate text-[11px] text-muted-foreground">
               {subtitle}
             </p>
-          )}
+          ) : null}
         </div>
       )}
     </div>
@@ -868,7 +883,7 @@ function WorkspaceShell({
         >
           <div
             className={cn(
-              "flex h-16 items-center border-b border-border/60",
+              "flex h-14 items-center border-b border-border/60",
               collapsed ? "justify-center px-2" : "px-4"
             )}
           >
@@ -909,8 +924,8 @@ function WorkspaceShell({
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-xl">
-            <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6">
-              <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
+              <div className="flex min-w-0 items-center gap-2">
                 <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
                   <SheetTrigger asChild>
                     <Button
@@ -928,7 +943,7 @@ function WorkspaceShell({
                         <Brand name={sitename} subtitle={subtitle} />
                       </SheetTitle>
                       <SheetDescription>
-                        {description || (kind === "admin" ? "平台运营" : "商户自收款与监听套餐")}
+                        {description || (kind === "admin" ? "平台运营" : "商户自收款与套餐管理")}
                       </SheetDescription>
                     </SheetHeader>
                     <PersistentNavScrollArea
@@ -939,15 +954,16 @@ function WorkspaceShell({
                     </PersistentNavScrollArea>
                   </SheetContent>
                 </Sheet>
-                <div className="flex min-w-0 items-center gap-2">
-                  <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="font-medium">
-                      {kind === "admin" ? "管理控制台" : "商户中心"}
-                    </span>
-                    <ChevronRight className="size-3.5 text-muted-foreground/40" />
-                  </div>
-                  <h2 className="truncate text-sm font-semibold text-foreground">{title}</h2>
-                </div>
+                <nav
+                  aria-label="面包屑"
+                  className="flex min-w-0 items-center gap-1.5 text-sm leading-none"
+                >
+                  <span className="hidden text-muted-foreground sm:inline">
+                    {kind === "admin" ? "管理控制台" : "商户中心"}
+                  </span>
+                  <ChevronRight className="hidden size-3.5 text-muted-foreground/40 sm:inline" />
+                  <span className="truncate font-medium text-foreground">{title}</span>
+                </nav>
               </div>
               <div className="flex items-center gap-1 sm:gap-2">
                 <Button
@@ -1059,7 +1075,7 @@ const merchantPageMeta: Record<string, string> = {
   通道管理: "连接监控端并管理收款码",
   软件下载: "下载安卓监控端并完成配置",
   聚合收款: "一个码收多种支付方式",
-  购买会员: "购买到账监听套餐",
+  套餐购买: "购买适合你的服务套餐",
   个人资料: "查看与修改商户资料",
   实名认证: "完成商户实名认证",
   保证金管理: "查看与缴纳保证金",
@@ -1483,7 +1499,7 @@ function AdminDashboard({ config }: { config?: JsonObject }) {
     <WorkspaceShell
       kind="admin"
       title="运营总览"
-      description="管理商户自收款、回调监听套餐与支付通道"
+      description="管理商户自收款、套餐服务与支付通道"
       sitename={sitename}
       features={features}
       user={user}
@@ -1743,16 +1759,23 @@ function ChannelIcon({
     return (
       <div
         className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#26A17B]/10 border border-[#26A17B]/20 text-[#26A17B] shadow-xs",
+          "flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#26A17B]/10 border border-[#26A17B]/20 shadow-xs",
           className
         )}
       >
         <svg
           viewBox="0 0 24 24"
-          className="size-4.5 fill-current"
-          aria-hidden="true"
+          className="size-5 shrink-0"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.25 5.25v1.36c2.46.12 4.34.62 4.34 1.22s-1.88 1.1-4.34 1.22v2.36h-2.5v-2.36c-2.46-.12-4.34-.62-4.34-1.22s1.88-1.1 4.34-1.22V7.25H6.5v-2h11v2h-4.25z" />
+          <circle cx="12" cy="12" r="10" fill="#26A17B" />
+          <path
+            fill="#FFFFFF"
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M13.435 12.355v-.002c-.068.005-.38.024-1.398.024-.803 0-1.258-.017-1.396-.024v.002C7.79 12.227 5.7 11.66 5.7 10.978c0-.684 2.09-1.25 4.94-1.378v2.188c.138.01.602.035 1.417.035.975 0 1.312-.027 1.377-.035V9.6c2.846.128 4.933.694 4.933 1.377 0 .683-2.087 1.25-4.932 1.378zm0-3.036V7.78h3.94V5.4H6.697v2.38h3.94v1.54c-3.23.148-5.637.848-5.637 1.68 0 .83 2.408 1.53 5.637 1.68v5.92h2.798v-5.92c3.224-.15 5.628-.85 5.628-1.68 0-.832-2.404-1.532-5.628-1.68z"
+          />
         </svg>
       </div>
     )
@@ -1903,14 +1926,14 @@ function MerchantDashboard({ config }: { config?: JsonObject }) {
     <WorkspaceShell
       kind="merchant"
       title="工作台"
-      description="用自己的收款码收款，平台负责回调与到账监听"
+      description="用自己的收款码收款，平台负责订单回调"
       sitename={sitename}
       features={features}
       user={user}
     >
       <PageHeading
         title="欢迎回来"
-        description="钱直接进入你的微信 / 支付宝。购买监听套餐后，到账通知会自动回调订单。"
+        description="钱直接进入你的微信 / 支付宝，购买套餐后即可获得订单回调服务。"
         brandName={sitename}
         action={
           <div className="flex flex-wrap items-center gap-2">
@@ -1930,7 +1953,7 @@ function MerchantDashboard({ config }: { config?: JsonObject }) {
               <Button asChild variant="outline" className="rounded-xl shadow-xs">
                 <a href="groupbuy.php">
                   <PackageCheck data-icon="inline-start" />
-                  监听套餐
+                  套餐购买
                 </a>
               </Button>
             )}
@@ -2390,6 +2413,32 @@ export function EpayApp({ view, config }: EpayAppProps) {
     return <QrCheckoutView config={config as QrCheckoutConfig | undefined} />
   if (view === "merchant-dashboard")
     return <MerchantDashboard config={config as JsonObject | undefined} />
+  if (view === "merchant-onecode")
+    return (
+      <WorkspaceShell
+        kind="merchant"
+        title="聚合收款"
+        description="统一管理收款二维码与分享链接"
+        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        features={objectOf(shellConfig, "features")}
+        user={objectOf(shellConfig, "user")}
+      >
+        <MerchantOnecodeView config={config as OnecodeConfig | undefined} />
+      </WorkspaceShell>
+    )
+  if (view === "merchant-plans")
+    return (
+      <WorkspaceShell
+        kind="merchant"
+        title="套餐购买"
+        description="选择适合你的回调监听服务套餐"
+        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        features={objectOf(shellConfig, "features")}
+        user={objectOf(shellConfig, "user")}
+      >
+        <MerchantPlansView config={config as MerchantPlansConfig | undefined} />
+      </WorkspaceShell>
+    )
   if (view === "soft-download") {
     const softConfig = (config ?? {}) as SoftDownloadConfig & JsonObject
     return (
