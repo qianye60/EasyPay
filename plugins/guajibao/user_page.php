@@ -47,8 +47,10 @@ foreach($channels as $channel){
 .gjb-stat span{display:block;margin-top:4px;font-size:11px;color:#94a3b8}
 .gjb-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
 .gjb-card-hd{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid #f1f5f9}
-.gjb-card-hd h2{margin:0;font-size:15px;font-weight:700}
-.gjb-card-hd small{color:#94a3b8;font-size:12px}
+.gjb-card-hd .gjb-poll{display:inline-flex;align-items:center;gap:6px;color:#94a3b8;font-size:12px}
+.gjb-card-hd .gjb-poll i{width:6px;height:6px;border-radius:50%;background:#94a3b8}
+.gjb-card-hd .gjb-poll.live i{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+.gjb-heart-ago{display:block;margin-top:2px;font-size:11px;font-weight:500;color:#94a3b8}
 .gjb-monitor{display:grid;grid-template-columns:180px minmax(0,1fr);gap:0}
 .gjb-aside{padding:20px;border-right:1px solid #f1f5f9;background:linear-gradient(180deg,#f8fafc 0%,#fff 100%);border-radius:0 0 0 16px}
 .gjb-aside.online{background:linear-gradient(180deg,#ecfdf5 0%,#fff 55%)}
@@ -142,13 +144,13 @@ foreach($channels as $channel){
       <section class="gjb-card">
         <div class="gjb-card-hd">
           <h2>监控端</h2>
-          <small>先装 APP，再扫码配置</small>
+          <span class="gjb-poll" id="gjb-poll"><i></i><span>状态刷新中</span></span>
         </div>
         <div class="gjb-monitor">
-          <aside class="gjb-aside <?php echo $online ? 'online' : ''?>">
-            <div class="gjb-live"><i class="gjb-dot"></i><?php echo $online ? '在线' : '离线'?></div>
-            <div class="gjb-meta">最后心跳<strong><?php echo h($lastHeart)?></strong></div>
-            <div class="gjb-meta">最近推送<strong title="<?php echo h($lastPush)?>"><?php echo h($lastPush)?></strong></div>
+          <aside class="gjb-aside <?php echo $online ? 'online' : ''?>" id="gjb-aside">
+            <div class="gjb-live" id="gjb-live"><i class="gjb-dot"></i><span id="gjb-live-text"><?php echo $online ? '在线' : '离线'?></span></div>
+            <div class="gjb-meta">最后心跳<strong id="gjb-heart"><?php echo h($lastHeart)?></strong><span class="gjb-heart-ago" id="gjb-heart-ago"></span></div>
+            <div class="gjb-meta">最近推送<strong id="gjb-push" title="<?php echo h($lastPush)?>"><?php echo h($lastPush)?></strong></div>
             <a href="softdown.php" class="gjb-dl">下载监控 APP</a>
           </aside>
           <div class="gjb-main">
@@ -286,6 +288,68 @@ function simulatePush(type){
     if(d.code===0) location.reload();
   });
 }
+function formatAgo(sec){
+  if(sec === null || sec === undefined || sec === '') return '';
+  sec = parseInt(sec, 10);
+  if(isNaN(sec) || sec < 0) return '';
+  if(sec < 5) return '刚刚';
+  if(sec < 60) return sec + ' 秒前';
+  if(sec < 3600) return Math.floor(sec / 60) + ' 分钟前';
+  if(sec < 86400) return Math.floor(sec / 3600) + ' 小时前';
+  return Math.floor(sec / 86400) + ' 天前';
+}
+function applyMonitorStatus(d){
+  var aside = document.getElementById('gjb-aside');
+  var liveText = document.getElementById('gjb-live-text');
+  var heart = document.getElementById('gjb-heart');
+  var heartAgo = document.getElementById('gjb-heart-ago');
+  var push = document.getElementById('gjb-push');
+  var poll = document.getElementById('gjb-poll');
+  if(!aside || !d) return;
+  var online = parseInt(d.online, 10) === 1;
+  if(online) aside.classList.add('online'); else aside.classList.remove('online');
+  if(liveText) liveText.textContent = online ? '在线' : '离线';
+  if(heart) heart.textContent = d.last_heart || '无';
+  if(heartAgo) heartAgo.textContent = d.last_heart ? formatAgo(d.heart_ago) : '';
+  var pushText = '尚未收到';
+  if(d.last_push){
+    pushText = d.last_push + (d.last_push_note ? (' ' + d.last_push_note) : '');
+  }
+  if(push){
+    push.textContent = pushText;
+    push.title = pushText;
+  }
+  if(poll){
+    poll.classList.add('live');
+    poll.querySelector('span').textContent = online ? '实时 · 在线' : '实时 · 离线';
+  }
+}
+(function pollMonitor(){
+  var busy = false;
+  var fetchStatus = function(){
+    if(busy || document.hidden) return;
+    busy = true;
+    var fd = new FormData();
+    fd.append('csrf_token', document.getElementById('csrf_token').value);
+    fd.append('act', 'status');
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/gjb-upload.php');
+    xhr.onload = function(){
+      busy = false;
+      try{
+        var d = JSON.parse(xhr.responseText);
+        if(d && d.code === 0) applyMonitorStatus(d);
+      }catch(e){}
+    };
+    xhr.onerror = function(){ busy = false; };
+    xhr.send(fd);
+  };
+  fetchStatus();
+  setInterval(fetchStatus, 3000);
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden) fetchStatus();
+  });
+})();
 (function(){
   var el = document.getElementById('gjb-qr');
   var text = document.getElementById('gjb-cfg').value;

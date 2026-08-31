@@ -18,6 +18,27 @@ if($act === 'resetkey'){
 	$key = GuajiHelper::resetKey($uid);
 	exit(json_encode(['code'=>0,'msg'=>'ok','key'=>$key], JSON_UNESCAPED_UNICODE));
 }
+if($act === 'status'){
+	$row = GuajiHelper::get($uid);
+	$online = GuajiHelper::online($uid);
+	$lastHeart = !empty($row['last_heart']) ? $row['last_heart'] : '';
+	$lastPush = !empty($row['last_push']) ? $row['last_push'] : '';
+	$lastPushNote = trim((string)($row['last_push_note'] ?? ''));
+	$heartAgo = null;
+	if($lastHeart !== ''){
+		$ts = strtotime($lastHeart);
+		if($ts) $heartAgo = max(0, time() - $ts);
+	}
+	exit(json_encode([
+		'code'=>0,
+		'online'=>$online ? 1 : 0,
+		'last_heart'=>$lastHeart,
+		'heart_ago'=>$heartAgo,
+		'last_push'=>$lastPush,
+		'last_push_note'=>$lastPushNote,
+		'server_time'=>date('Y-m-d H:i:s'),
+	], JSON_UNESCAPED_UNICODE));
+}
 if($act === 'testorder'){
 	global $clientip, $siteurl, $conf;
 	$type = trim($_POST['type'] ?? '');
