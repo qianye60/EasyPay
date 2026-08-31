@@ -962,72 +962,84 @@ case 'orderList':
 	}
 	unset($rs);
 
-	$sql=" A.uid=$uid";
-	if(isset($_POST['paytype']) && !empty($_POST['paytype'])) {
-		$type = intval($_POST['paytype']);
-		$sql.=" AND A.`type`='$type'";
+	$conditions = ["A.uid=:uid"];
+	$params = [':uid'=>$uid];
+	$allowed_columns = ['trade_no', 'out_trade_no', 'api_trade_no', 'type', 'channel', 'name', 'money', 'realmoney', 'getmoney', 'domain', 'ip', 'buyer', 'status', 'subchannel', 'bill_trade_no', 'bill_mch_trade_no', 'mobile'];
+
+	if(isset($_POST['type']) && $_POST['type'] !== '' && $_POST['type'] !== 'all') {
+		$conditions[] = "A.`type`=:f_type";
+		$params[':f_type'] = intval($_POST['type']);
+	}elseif(isset($_POST['paytype']) && !empty($_POST['paytype'])) {
+		$conditions[] = "A.`type`=:f_type";
+		$params[':f_type'] = intval($_POST['paytype']);
 	}elseif(isset($_POST['channel']) && !empty($_POST['channel'])) {
-		$channel = intval($_POST['channel']);
-		$sql.=" AND A.`channel`='$channel'";
+		$conditions[] = "A.`channel`=:f_channel";
+		$params[':f_channel'] = intval($_POST['channel']);
 	}elseif(isset($_POST['subchannel']) && !empty($_POST['subchannel'])) {
-		$subchannel = intval($_POST['subchannel']);
-		$sql.=" AND A.`subchannel`='$subchannel'";
+		$conditions[] = "A.`subchannel`=:f_subchannel";
+		$params[':f_subchannel'] = intval($_POST['subchannel']);
 	}elseif(isset($_POST['applyid']) && !empty($_POST['applyid'])) {
-		$applyid = intval($_POST['applyid']);
-		$sql.=" AND A.`subchannel` IN (SELECT id FROM pre_subchannel WHERE apply_id='{$applyid}')";
+		$conditions[] = "A.`subchannel` IN (SELECT id FROM pre_subchannel WHERE apply_id=:f_applyid)";
+		$params[':f_applyid'] = intval($_POST['applyid']);
 	}
-	if(isset($_POST['dstatus']) && $_POST['dstatus']>-1) {
-		$dstatus = intval($_POST['dstatus']);
-		$sql.=" AND A.status='{$dstatus}'";
+	if(isset($_POST['dstatus']) && $_POST['dstatus'] !== '' && $_POST['dstatus'] !== 'all') {
+		if(substr((string)$_POST['dstatus'], 0, 6) === 'settle'){
+			$conditions[] = "A.settle=:f_dstatus";
+			$params[':f_dstatus'] = intval(substr((string)$_POST['dstatus'], 7));
+		}else{
+			$conditions[] = "A.status=:f_dstatus";
+			$params[':f_dstatus'] = intval($_POST['dstatus']);
+		}
 	}
 	if(!empty($_POST['starttime']) || !empty($_POST['endtime'])){
 		if(!empty($_POST['starttime'])){
-			$starttime = daddslashes($_POST['starttime']);
-			$sql.=" AND A.addtime>='{$starttime} 00:00:00'";
+			$conditions[] = "A.addtime>=:f_starttime";
+			$params[':f_starttime'] = $_POST['starttime'].' 00:00:00';
 		}
 		if(!empty($_POST['endtime'])){
-			$endtime = daddslashes($_POST['endtime']);
-			$sql.=" AND A.addtime<='{$endtime} 23:59:59'";
+			$conditions[] = "A.addtime<=:f_endtime";
+			$params[':f_endtime'] = $_POST['endtime'].' 23:59:59';
 		}
 	}
-	if(isset($_POST['kw']) && !empty($_POST['kw'])) {
-		$kw=daddslashes($_POST['kw']);
-		if($_POST['type']==1){
-			$sql.=" AND A.`trade_no`='{$kw}'";
-		}elseif($_POST['type']==2){
-			$sql.=" AND A.`out_trade_no`='{$kw}'";
-		}elseif($_POST['type']==3){
-			$sql.=" AND A.`name` like '%{$kw}%'";
-		}elseif($_POST['type']==4){
-			$sql.=" AND A.`money`='{$kw}'";
-		}elseif($_POST['type']==5){
-			$sql.=" AND A.`realmoney`='{$kw}'";
-		}elseif($_POST['type']==6){
-			$sql.=" AND A.`domain`='{$kw}'";
-		}elseif($_POST['type']==7){
-			$sql.=" AND A.`ip`='{$kw}'";
-		}elseif($_POST['type']==8){
-			$sql.=" AND A.`buyer`='{$kw}'";
-		}elseif($_POST['type']==9){
-			$sql.=" AND A.`api_trade_no`='{$kw}'";
-		}elseif($_POST['type']==10){
-			$sql.=" AND A.`bill_trade_no`='{$kw}'";
-		}elseif($_POST['type']==11){
-			$sql.=" AND A.`bill_mch_trade_no`='{$kw}'";
+	// 新前端传 column/value；旧版传 type(1-11)+kw
+	if(isset($_POST['value']) && $_POST['value'] !== '') {
+		$col = isset($_POST['column']) ? (string)$_POST['column'] : 'trade_no';
+		if(!in_array($col, $allowed_columns, true)) exit('{"code":-1,"msg":"invalid column"}');
+		if($col === 'name'){
+			$conditions[] = "A.`name` like :f_value";
+			$params[':f_value'] = '%'.$_POST['value'].'%';
+		}else{
+			$conditions[] = "A.`{$col}`=:f_value";
+			$params[':f_value'] = $_POST['value'];
+		}
+	}elseif(isset($_POST['kw']) && $_POST['kw'] !== '') {
+		$kw = (string)$_POST['kw'];
+		$searchType = intval($_POST['type'] ?? 1);
+		$map = [1=>'trade_no',2=>'out_trade_no',3=>'name',4=>'money',5=>'realmoney',6=>'domain',7=>'ip',8=>'buyer',9=>'api_trade_no',10=>'bill_trade_no',11=>'bill_mch_trade_no'];
+		$col = $map[$searchType] ?? 'trade_no';
+		if($col === 'name'){
+			$conditions[] = "A.`name` like :f_value";
+			$params[':f_value'] = '%'.$kw.'%';
+		}else{
+			$conditions[] = "A.`{$col}`=:f_value";
+			$params[':f_value'] = $kw;
 		}
 	}
-	$offset = intval($_POST['offset']);
-	$limit = intval($_POST['limit']);
-	$total = $DB->getColumn("SELECT count(*) from pre_order A WHERE{$sql}");
-	$list = $DB->getAll("SELECT A.*,B.plugin,C.apply_id submchid FROM pre_order A LEFT JOIN pre_channel B ON A.channel=B.id LEFT JOIN pre_subchannel C ON A.subchannel=C.id WHERE{$sql} order by trade_no desc limit $offset,$limit");
+	$where = implode(' AND ', $conditions);
+	$offset = isset($_POST['offset']) ? max(0, intval($_POST['offset'])) : 0;
+	$limit = isset($_POST['limit']) ? intval($_POST['limit']) : 30;
+	if($limit < 1) $limit = 30;
+	if($limit > 100) $limit = 100;
+	$total = $DB->getColumn("SELECT count(*) from pre_order A WHERE {$where}", $params);
+	$list = $DB->getAll("SELECT A.*,B.plugin,C.apply_id submchid FROM pre_order A LEFT JOIN pre_channel B ON A.channel=B.id LEFT JOIN pre_subchannel C ON A.subchannel=C.id WHERE {$where} order by trade_no desc limit {$offset},{$limit}", $params);
 	$list2 = [];
 	foreach($list as $row){
-		$row['typename'] = $paytypes[$row['type']];
-		$row['typeshowname'] = $paytype[$row['type']];
+		$row['typename'] = $paytypes[$row['type']] ?? '';
+		$row['typeshowname'] = $paytype[$row['type']] ?? '';
 		$list2[] = $row;
 	}
 
-	exit(json_encode(['total'=>$total, 'rows'=>$list2]));
+	exit(json_encode(['code'=>0, 'total'=>intval($total), 'rows'=>$list2]));
 break;
 case 'statistics':
     $sql=" A.uid=$uid";

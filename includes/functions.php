@@ -1025,11 +1025,19 @@ function is_idcard( $id )
 }
 
 function checkRefererHost(){
-	if(!$_SERVER['HTTP_REFERER'])return false;
-	$url_arr = parse_url($_SERVER['HTTP_REFERER']);
-	$http_host = $_SERVER['HTTP_HOST'];
+	$http_host = $_SERVER['HTTP_HOST'] ?? '';
 	if(strpos($http_host,':'))$http_host = substr($http_host, 0, strpos($http_host, ':'));
-	return $url_arr['host'] === $http_host;
+	if($http_host === '') return false;
+	if(!empty($_SERVER['HTTP_REFERER'])){
+		$url_arr = parse_url($_SERVER['HTTP_REFERER']);
+		if(!empty($url_arr['host']) && $url_arr['host'] === $http_host) return true;
+	}
+	// 同源 fetch 偶发无 Referer，用 Origin 兜底
+	if(!empty($_SERVER['HTTP_ORIGIN'])){
+		$origin = parse_url($_SERVER['HTTP_ORIGIN']);
+		if(!empty($origin['host']) && $origin['host'] === $http_host) return true;
+	}
+	return false;
 }
 function randFloat($min=0, $max=1){
 	return $min + mt_rand()/mt_getrandmax() * ($max-$min);

@@ -59,8 +59,10 @@ import {
 type JsonObject = Record<string, unknown>
 
 export type AdminOrderConfig = {
+  kind?: "admin" | "merchant"
   sitename?: string
   csrf_token?: string
+  is_user_refund?: boolean
   paymentTypes?: Array<{ id: string | number; name?: string; showname?: string }>
 }
 
@@ -246,6 +248,12 @@ function money(value: unknown) {
 async function decodeResponse(response: Response) {
   const data = (await response.json().catch(() => ({}))) as JsonObject
   if (!response.ok) throw new Error(stringValue(data.msg, "请求失败"))
+  if ("code" in data) {
+    const code = Number(data.code)
+    if (code === -3) throw new Error("登录已失效，请刷新后重新登录")
+    if (code === 403) throw new Error(stringValue(data.msg, "请求被拒绝，请刷新页面重试"))
+    if (Number.isFinite(code) && code < 0) throw new Error(stringValue(data.msg, "请求失败"))
+  }
   return data
 }
 
@@ -317,6 +325,13 @@ export function AdminOrderView({ config = {} }: { config?: AdminOrderConfig }) {
   const allSelected = rows.length > 0 && rows.every((row) => selected.has(stringValue(row.trade_no)))
   const someSelected = rows.some((row) => selected.has(stringValue(row.trade_no)))
 
+  const isMerchant = config.kind === "merchant"
+  const listEndpoint = isMerchant ? "ajax2.php?act=orderList" : "ajax_order.php?act=orderList"
+  const actionEndpoint = isMerchant ? "ajax2.php" : "ajax_order.php"
+  const statsEndpoint = isMerchant ? "ajax2.php?act=statistics" : "ajax_order.php?act=statistics"
+  const detailEndpoint = isMerchant ? "ajax2.php?act=order" : "ajax_order.php?act=order"
+  const subOrdersEndpoint = isMerchant ? "ajax2.php?act=subOrders" : "ajax_order.php?act=subOrders"
+
   const syncUrl = React.useCallback((nextFilters: Filters, nextPage: number, nextPageSize: number) => {
     if (typeof window === "undefined") return
     const url = new URL(window.location.href)
@@ -344,7 +359,7 @@ export function AdminOrderView({ config = {} }: { config?: AdminOrderConfig }) {
     setLoading(true)
     setError("")
     try {
-      const response = await fetch("ajax_order.php?act=orderList", {
+      const response = await fetch(listEndpoint, {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
@@ -359,7 +374,7 @@ export function AdminOrderView({ config = {} }: { config?: AdminOrderConfig }) {
     } finally {
       setLoading(false)
     }
-  }, [applied, buildBody, page, pageSize])
+  }, [applied, buildBody, listEndpoint, page, pageSize])
 
   React.useEffect(() => {
     const timer = window.setTimeout(() => void loadOrders(), 0)
@@ -373,14 +388,14 @@ export function AdminOrderView({ config = {} }: { config?: AdminOrderConfig }) {
       if (Array.isArray(value)) value.forEach((item) => body.append(`${key}[]`, item))
       else body.set(key, String(value))
     })
-    const response = await fetch(`ajax_order.php?act=${encodeURIComponent(act)}`, {
+    const response = await fetch(`${actionEndpoint}?act=${encodeURIComponent(act)}`, {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
       body,
     })
     return decodeResponse(response)
-  }, [csrfToken])
+  }, [actionEndpoint, csrfToken])
 
   const announce = React.useCallback((kind: Notice["kind"], text: string) => {
     setNotice({ kind, text })
@@ -434,7 +449,7 @@ export function AdminOrderView({ config = {} }: { config?: AdminOrderConfig }) {
     setStatisticsOpen(true)
     setStatisticsLoading(true)
     try {
-      const response = await fetch("ajax_order.php?act=statistics", {
+      const response = await fetch(statsEndpoint, {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
@@ -455,11 +470,11 @@ export function AdminOrderView({ config = {} }: { config?: AdminOrderConfig }) {
     setDetail(null)
     setSubOrders([])
     try {
-      const response = await fetch(`ajax_order.php?act=order&trade_no=${encodeURIComponent(tradeNo)}`, { credentials: "same-origin" })
+      const response = await fetch(`${detailEndpoint}&trade_no=${encodeURIComponent(tradeNo)}`, { credentials: "same-origin" })
       const data = await decodeResponse(response)
       setDetail((data.data as OrderRow) ?? null)
       if (numberValue(data.data && (data.data as OrderRow).combine) === 1) {
-        const subResponse = await fetch(`ajax_order.php?act=subOrders&trade_no=${encodeURIComponent(tradeNo)}`, { credentials: "same-origin" })
+        const subResponse = await fetch(`${subOrdersEndpoint}&trade_no=${encodeURIComponent(tradeNo)}`, { credentials: "same-origin" })
         const subData = await decodeResponse(subResponse)
         setSubOrders(Array.isArray(subData.data) ? (subData.data as OrderRow[]) : [])
       }
@@ -635,6 +650,16 @@ export function AdminOrderView({ config = {} }: { config?: AdminOrderConfig }) {
   const actionItems = (row: OrderRow) => {
     const status = numberValue(row.status)
     const items: Array<{ key: string; label: string; destructive?: boolean }> = []
+    if (isMerchant) {
+      items.push({ key: "detail", label: "查看详情" })
+      if (status === 1 || status === 2) {
+        items.push({ key: "notify", label: "重新通知（异步）" }, { key: "return", label: "重新通知（同步）" })
+      }
+      if (config.is_user_refund && status === 1) {
+        items.push({ key: "refund", label: "申请退款" })
+      }
+      return items
+    }
     if ((row.plugin === "alipayd" || row.plugin === "wxpaynp") && [1, 3].includes(numberValue(row.settle))) items.push({ key: "settle", label: "确认结算" })
     if (row.plugin === "alipayrp" && [1, 3].includes(numberValue(row.settle))) items.push({ key: "redpacket", label: "红包转账重试" })
     if (status === 1) items.push({ key: "status0", label: "改未完成" }, { key: "apirefund", label: "API 退款" }, { key: "refund", label: "手动退款" }, { key: "freeze", label: "冻结订单" })
@@ -671,98 +696,106 @@ export function AdminOrderView({ config = {} }: { config?: AdminOrderConfig }) {
   ] : []
 
   return (
-    <div className="min-h-svh bg-muted/30 text-foreground">
-      <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex min-w-0 items-start gap-3">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-background">
-              <CircleDollarSign data-icon="inline-start" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs text-muted-foreground">{sitename}</p>
-              <h1 className="mt-1 text-2xl font-semibold tracking-tight">订单管理</h1>
-              <p className="mt-1 text-sm text-muted-foreground">查询、核对并处理平台订单，所有操作都会记录在后台。</p>
-            </div>
+    <div className="flex w-full flex-col gap-6">
+      <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border/50 pb-5">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-background shadow-xs">
+            <CircleDollarSign className="size-5 text-primary" data-icon="inline-start" />
           </div>
-          <Button variant="outline" onClick={() => void loadOrders()} disabled={loading} className="rounded-xl">
-            {loading ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}
-            刷新列表
-          </Button>
-        </header>
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-muted-foreground">{sitename}</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl text-foreground">
+              {isMerchant ? "订单记录" : "订单管理"}
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm text-muted-foreground leading-snug">
+              {isMerchant ? "查询、核对并管理商户交易订单与回调通知。" : "查询、核对并处理平台订单，所有操作都会记录在后台。"}
+            </p>
+          </div>
+        </div>
+        <Button variant="outline" onClick={() => void loadOrders()} disabled={loading} className="rounded-xl shadow-xs">
+          {loading ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}
+          刷新列表
+        </Button>
+      </header>
 
-        {notice && (
-          <Alert variant={notice.kind === "error" ? "destructive" : "default"}>
-            {notice.kind === "error" ? <X data-icon="inline-start" /> : <Check data-icon="inline-start" />}
-            <AlertTitle>{notice.kind === "error" ? "操作未完成" : "操作成功"}</AlertTitle>
-            <AlertDescription>{notice.text}</AlertDescription>
-          </Alert>
-        )}
+      {notice && (
+        <Alert variant={notice.kind === "error" ? "destructive" : "default"} className="rounded-2xl">
+          {notice.kind === "error" ? <X data-icon="inline-start" /> : <Check data-icon="inline-start" />}
+          <AlertTitle>{notice.kind === "error" ? "操作未完成" : "操作成功"}</AlertTitle>
+          <AlertDescription>{notice.text}</AlertDescription>
+        </Alert>
+      )}
 
-        <Card className="rounded-2xl shadow-sm">
-          <CardHeader className="gap-2 border-b">
-            <CardTitle className="text-base">筛选订单</CardTitle>
-            <CardDescription>支持订单号、商户、支付方式、状态与时间范围组合查询。</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <form onSubmit={submitFilters} className="flex flex-col gap-5">
-              <FieldGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
-                <Field>
-                  <FieldLabel htmlFor="order-column">搜索字段</FieldLabel>
-                  <Select value={filters.column} onValueChange={(value) => setFilters((current) => ({ ...current, column: value }))}>
-                    <SelectTrigger id="order-column" className="w-full"><SelectValue placeholder="订单号" /></SelectTrigger>
-                    <SelectContent><SelectGroup>{SEARCH_COLUMNS.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectGroup></SelectContent>
-                  </Select>
-                </Field>
-                <Field className="sm:col-span-2">
-                  <FieldLabel htmlFor="order-value">搜索内容</FieldLabel>
-                  <Input id="order-value" value={filters.value} onChange={(event) => setFilters((current) => ({ ...current, value: event.target.value }))} placeholder="输入精确值；商品名支持模糊匹配" />
-                </Field>
+      <Card className="rounded-2xl border-border/70 shadow-xs">
+        <CardHeader className="gap-2 border-b border-border/50 pb-4">
+          <CardTitle className="text-base font-semibold">筛选订单</CardTitle>
+          <CardDescription className="text-xs">支持订单号、支付方式、状态与时间范围组合查询。</CardDescription>
+        </CardHeader>
+        <CardContent className="pt-5">
+          <form onSubmit={submitFilters} className="flex flex-col gap-4">
+            <FieldGroup className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-6">
+              <Field>
+                <FieldLabel htmlFor="order-column">搜索字段</FieldLabel>
+                <Select value={filters.column} onValueChange={(value) => setFilters((current) => ({ ...current, column: value }))}>
+                  <SelectTrigger id="order-column" className="w-full"><SelectValue placeholder="订单号" /></SelectTrigger>
+                  <SelectContent><SelectGroup>{SEARCH_COLUMNS.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectGroup></SelectContent>
+                </Select>
+              </Field>
+              <Field className="sm:col-span-2">
+                <FieldLabel htmlFor="order-value">搜索内容</FieldLabel>
+                <Input id="order-value" value={filters.value} onChange={(event) => setFilters((current) => ({ ...current, value: event.target.value }))} placeholder="输入精确值；商品名支持模糊匹配" />
+              </Field>
+              {!isMerchant && (
                 <Field>
                   <FieldLabel htmlFor="order-uid">商户号</FieldLabel>
                   <Input id="order-uid" inputMode="numeric" value={filters.uid} onChange={(event) => setFilters((current) => ({ ...current, uid: event.target.value }))} placeholder="商户 ID" />
                 </Field>
-                <Field>
-                  <FieldLabel htmlFor="order-type">支付方式</FieldLabel>
-                  <Select value={filters.type || "all"} onValueChange={(value) => setFilters((current) => ({ ...current, type: typeValue(value) }))}>
-                    <SelectTrigger id="order-type" className="w-full"><SelectValue placeholder="全部方式" /></SelectTrigger>
-                    <SelectContent><SelectGroup><SelectItem value="all">全部方式</SelectItem>{paymentTypes.map((item) => <SelectItem key={String(item.id)} value={String(item.id)}>{item.showname || item.name || String(item.id)}</SelectItem>)}</SelectGroup></SelectContent>
-                  </Select>
-                </Field>
+              )}
+              <Field>
+                <FieldLabel htmlFor="order-type">支付方式</FieldLabel>
+                <Select value={filters.type || "all"} onValueChange={(value) => setFilters((current) => ({ ...current, type: typeValue(value) }))}>
+                  <SelectTrigger id="order-type" className="w-full"><SelectValue placeholder="全部方式" /></SelectTrigger>
+                  <SelectContent><SelectGroup><SelectItem value="all">全部方式</SelectItem>{paymentTypes.map((item) => <SelectItem key={String(item.id)} value={String(item.id)}>{item.showname || item.name || String(item.id)}</SelectItem>)}</SelectGroup></SelectContent>
+                </Select>
+              </Field>
+              {!isMerchant && (
                 <Field>
                   <FieldLabel htmlFor="order-channel">通道 ID</FieldLabel>
                   <Input id="order-channel" inputMode="numeric" value={filters.channel} onChange={(event) => setFilters((current) => ({ ...current, channel: event.target.value }))} placeholder="通道 ID" />
                 </Field>
-                <Field>
-                  <FieldLabel htmlFor="order-starttime">开始日期</FieldLabel>
-                  <Input id="order-starttime" type="date" value={filters.starttime} onChange={(event) => setFilters((current) => ({ ...current, starttime: event.target.value }))} />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="order-endtime">结束日期</FieldLabel>
-                  <Input id="order-endtime" type="date" value={filters.endtime} onChange={(event) => setFilters((current) => ({ ...current, endtime: event.target.value }))} />
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="order-status">订单状态</FieldLabel>
-                  <Select value={filters.dstatus || "all"} onValueChange={(value) => setFilters((current) => ({ ...current, dstatus: typeValue(value) }))}>
-                    <SelectTrigger id="order-status" className="w-full"><SelectValue placeholder="全部状态" /></SelectTrigger>
-                    <SelectContent><SelectGroup><SelectItem value="all">全部状态</SelectItem>{STATUS_OPTIONS.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectGroup></SelectContent>
-                  </Select>
-                </Field>
-              </FieldGroup>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button type="submit" className="rounded-xl"><Search data-icon="inline-start" />搜索订单</Button>
-                <Button type="button" variant="outline" onClick={clearFilters} className="rounded-xl"><RefreshCw data-icon="inline-start" />重置筛选</Button>
-                <Button type="button" variant="outline" onClick={() => void openStatistics()} className="rounded-xl"><BarChart3 data-icon="inline-start" />统计当前结果</Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card className="overflow-hidden rounded-2xl shadow-sm">
-          <CardHeader className="flex flex-col gap-4 border-b sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle className="text-base">订单列表</CardTitle>
-              <CardDescription>{total ? `共 ${total} 条订单，当前第 ${page} / ${totalPages} 页` : "当前筛选条件下暂无订单"}</CardDescription>
+              )}
+              <Field>
+                <FieldLabel htmlFor="order-starttime">开始日期</FieldLabel>
+                <Input id="order-starttime" type="date" value={filters.starttime} onChange={(event) => setFilters((current) => ({ ...current, starttime: event.target.value }))} />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="order-endtime">结束日期</FieldLabel>
+                <Input id="order-endtime" type="date" value={filters.endtime} onChange={(event) => setFilters((current) => ({ ...current, endtime: event.target.value }))} />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="order-status">订单状态</FieldLabel>
+                <Select value={filters.dstatus || "all"} onValueChange={(value) => setFilters((current) => ({ ...current, dstatus: typeValue(value) }))}>
+                  <SelectTrigger id="order-status" className="w-full"><SelectValue placeholder="全部状态" /></SelectTrigger>
+                  <SelectContent><SelectGroup><SelectItem value="all">全部状态</SelectItem>{STATUS_OPTIONS.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectGroup></SelectContent>
+                </Select>
+              </Field>
+            </FieldGroup>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Button type="submit" className="rounded-xl shadow-sm"><Search data-icon="inline-start" />搜索订单</Button>
+              <Button type="button" variant="outline" onClick={clearFilters} className="rounded-xl"><RefreshCw data-icon="inline-start" />重置筛选</Button>
+              <Button type="button" variant="outline" onClick={() => void openStatistics()} className="rounded-xl"><BarChart3 data-icon="inline-start" />统计当前结果</Button>
             </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card className="overflow-hidden rounded-2xl border-border/70 shadow-xs">
+        <CardHeader className="flex flex-col gap-4 border-b border-border/50 pb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="text-base font-semibold">订单列表</CardTitle>
+            <CardDescription className="text-xs">{total ? `共 ${total} 条订单，当前第 ${page} / ${totalPages} 页` : "当前筛选条件下暂无订单"}</CardDescription>
+          </div>
+          {!isMerchant && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="rounded-xl" disabled={!someSelected || busy}>
@@ -779,54 +812,87 @@ export function AdminOrderView({ config = {} }: { config?: AdminOrderConfig }) {
                 </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
-          </CardHeader>
-          <CardContent className="p-0">
-            {error ? (
-              <div className="p-6"><Alert variant="destructive"><AlertTitle>订单列表加载失败</AlertTitle><AlertDescription>{error}</AlertDescription></Alert></div>
-            ) : (
-              <div className="overflow-x-auto">
-              <Table className="min-w-[1280px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10"><Checkbox checked={allSelected ? true : someSelected ? "indeterminate" : false} onCheckedChange={(checked) => setSelected(checked ? new Set(rows.map((row) => stringValue(row.trade_no))) : new Set())} aria-label="选择当前页订单" /></TableHead>
-                    <TableHead>订单号</TableHead><TableHead>商户</TableHead><TableHead>商品</TableHead><TableHead>金额</TableHead><TableHead>支付方式</TableHead><TableHead>时间</TableHead><TableHead>状态</TableHead><TableHead className="text-right">操作</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    <TableRow><TableCell colSpan={9} className="h-32 text-center text-muted-foreground"><Loader2 className="mr-2 inline-block animate-spin" data-icon="inline-start" />正在加载订单</TableCell></TableRow>
-                  ) : rows.length ? rows.map((row) => {
-                    const tradeNo = stringValue(row.trade_no)
-                    return (
-                      <TableRow key={tradeNo} data-state={selected.has(tradeNo) ? "selected" : undefined}>
-                        <TableCell><Checkbox checked={selected.has(tradeNo)} onCheckedChange={(checked) => setSelected((current) => { const next = new Set(current); if (checked) next.add(tradeNo); else next.delete(tradeNo); return next })} aria-label={`选择订单 ${tradeNo}`} /></TableCell>
-                        <TableCell className="min-w-52"><Button variant="link" className="h-auto max-w-64 justify-start px-0 font-mono text-xs whitespace-normal" onClick={() => void openDetail(tradeNo)}>{tradeNo}</Button><span className="block max-w-64 truncate text-xs text-muted-foreground">{stringValue(row.out_trade_no, "无商户订单号")}</span></TableCell>
-                        <TableCell className="min-w-36"><span className="font-medium">{stringValue(row.uid, "—")}</span><span className="block max-w-44 truncate text-xs text-muted-foreground">{stringValue(row.domain, "—")}</span></TableCell>
-                        <TableCell className="min-w-48 max-w-64 whitespace-normal"><span className="font-medium">{stringValue(row.name, "未命名商品")}</span><span className="block text-xs text-muted-foreground">{money(row.money)}</span></TableCell>
-                        <TableCell className="min-w-32"><span className="font-medium">{money(row.realmoney ?? row.money)}</span><span className="block text-xs text-muted-foreground">分成 {money(row.getmoney)}</span></TableCell>
-                        <TableCell className="min-w-36"><span className="font-medium">{displayType(row)}</span><span className="block max-w-40 truncate text-xs text-muted-foreground">{stringValue(row.plugin, "—")}</span></TableCell>
-                        <TableCell className="min-w-36"><span className="block text-xs">{stringValue(row.addtime, "—")}</span><span className="block text-xs text-muted-foreground">{stringValue(row.endtime, "未完成")}</span></TableCell>
-                        <TableCell>{statusBadge(row)}</TableCell>
-                        <TableCell className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="rounded-lg"><MoreHorizontal data-icon="inline-start" />操作</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-48"><DropdownMenuItem onSelect={() => void openDetail(tradeNo)}><Eye data-icon="inline-start" />查看详情</DropdownMenuItem><DropdownMenuSeparator />{actionItems(row).map((item) => <DropdownMenuItem key={item.key} variant={item.destructive ? "destructive" : "default"} onSelect={() => rowAction(row, item.key)}>{item.destructive ? <Trash2 data-icon="inline-start" /> : null}{item.label}</DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu></TableCell>
-                      </TableRow>
-                    )
-                  }) : <TableRow><TableCell colSpan={9} className="h-32 text-center text-muted-foreground">暂无符合条件的订单</TableCell></TableRow>}
-                </TableBody>
-              </Table>
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex flex-col gap-3 border-t px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground">显示 {total ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, total)} / {total} 条</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select value={String(pageSize)} onValueChange={changePageSize}><SelectTrigger className="w-28" aria-label="每页数量"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{[10, 30, 50, 100].map((size) => <SelectItem key={size} value={String(size)}>{size} 条 / 页</SelectItem>)}</SelectGroup></SelectContent></Select>
-              <Button variant="outline" size="sm" className="rounded-lg" onClick={() => changePage(page - 1)} disabled={page <= 1 || loading}><ChevronLeft data-icon="inline-start" />上一页</Button>
-              <span className="min-w-20 text-center text-sm text-muted-foreground">第 {page} / {totalPages} 页</span>
-              <Button variant="outline" size="sm" className="rounded-lg" onClick={() => changePage(page + 1)} disabled={page >= totalPages || loading}>下一页<ChevronRight data-icon="inline-end" /></Button>
+          )}
+        </CardHeader>
+        <CardContent className="p-0">
+          {error ? (
+            <div className="p-6"><Alert variant="destructive"><AlertTitle>订单列表加载失败</AlertTitle><AlertDescription>{error}</AlertDescription></Alert></div>
+          ) : (
+            <div className="overflow-x-auto">
+            <Table className="min-w-[1080px]">
+              <TableHeader>
+                <TableRow className="bg-muted/30">
+                  {!isMerchant && <TableHead className="w-10"><Checkbox checked={allSelected ? true : someSelected ? "indeterminate" : false} onCheckedChange={(checked) => setSelected(checked ? new Set(rows.map((row) => stringValue(row.trade_no))) : new Set())} aria-label="选择当前页订单" /></TableHead>}
+                  <TableHead className="font-semibold text-xs py-3">订单号 / 商户单号</TableHead>
+                  {!isMerchant && <TableHead className="font-semibold text-xs py-3">商户</TableHead>}
+                  <TableHead className="font-semibold text-xs py-3">商品名称</TableHead>
+                  <TableHead className="font-semibold text-xs py-3">订单金额</TableHead>
+                  <TableHead className="font-semibold text-xs py-3">实付金额</TableHead>
+                  <TableHead className="font-semibold text-xs py-3">支付方式</TableHead>
+                  <TableHead className="font-semibold text-xs py-3">创建 / 完成时间</TableHead>
+                  <TableHead className="font-semibold text-xs py-3">支付状态</TableHead>
+                  <TableHead className="text-right font-semibold text-xs py-3 pr-6">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  <TableRow><TableCell colSpan={isMerchant ? 8 : 10} className="h-32 text-center text-muted-foreground"><Loader2 className="mr-2 inline-block animate-spin" data-icon="inline-start" />正在加载订单</TableCell></TableRow>
+                ) : rows.length ? rows.map((row) => {
+                  const tradeNo = stringValue(row.trade_no)
+                  return (
+                    <TableRow key={tradeNo} data-state={selected.has(tradeNo) ? "selected" : undefined} className="hover:bg-muted/40">
+                      {!isMerchant && <TableCell><Checkbox checked={selected.has(tradeNo)} onCheckedChange={(checked) => setSelected((current) => { const next = new Set(current); if (checked) next.add(tradeNo); else next.delete(tradeNo); return next })} aria-label={`选择订单 ${tradeNo}`} /></TableCell>}
+                      <TableCell className="min-w-52 py-3.5">
+                        <Button variant="link" className="h-auto max-w-64 justify-start p-0 font-mono text-xs font-semibold whitespace-normal text-primary hover:underline" onClick={() => void openDetail(tradeNo)}>{tradeNo}</Button>
+                        <span className="block max-w-64 truncate text-xs text-muted-foreground">{stringValue(row.out_trade_no, "无商户单号")}</span>
+                      </TableCell>
+                      {!isMerchant && (
+                        <TableCell className="min-w-36 py-3.5">
+                          <span className="font-medium">UID: {stringValue(row.uid, "—")}</span>
+                          <span className="block max-w-44 truncate text-xs text-muted-foreground">{stringValue(row.domain, "—")}</span>
+                        </TableCell>
+                      )}
+                      <TableCell className="min-w-44 max-w-64 whitespace-normal py-3.5"><span className="font-medium text-sm">{stringValue(row.name, "未命名商品")}</span></TableCell>
+                      <TableCell className="min-w-28 py-3.5"><span className="font-semibold text-sm tabular-nums">{money(row.money)}</span></TableCell>
+                      <TableCell className="min-w-28 py-3.5"><span className="font-semibold text-sm tabular-nums text-emerald-600 dark:text-emerald-400">{money(row.realmoney ?? row.money)}</span></TableCell>
+                      <TableCell className="min-w-36 py-3.5"><span className="font-medium text-xs">{displayType(row)}</span></TableCell>
+                      <TableCell className="min-w-36 py-3.5"><span className="block text-xs">{stringValue(row.addtime, "—")}</span><span className="block text-xs text-muted-foreground">{stringValue(row.endtime, "未完成")}</span></TableCell>
+                      <TableCell className="py-3.5">{statusBadge(row)}</TableCell>
+                      <TableCell className="text-right py-3.5 pr-6">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="rounded-lg h-8 text-xs"><MoreHorizontal data-icon="inline-start" />操作</Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-48 rounded-xl p-1 shadow-lg">
+                            <DropdownMenuItem onSelect={() => void openDetail(tradeNo)} className="rounded-lg text-xs"><Eye className="size-3.5" data-icon="inline-start" />查看详情</DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {actionItems(row).map((item) => (
+                              <DropdownMenuItem key={item.key} variant={item.destructive ? "destructive" : "default"} onSelect={() => rowAction(row, item.key)} className="rounded-lg text-xs">
+                                {item.destructive ? <Trash2 className="size-3.5" data-icon="inline-start" /> : null}
+                                {item.label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  )
+                }) : <TableRow><TableCell colSpan={isMerchant ? 8 : 10} className="h-32 text-center text-muted-foreground">暂无符合条件的订单</TableCell></TableRow>}
+              </TableBody>
+            </Table>
             </div>
-          </CardFooter>
-        </Card>
-      </div>
+          )}
+        </CardContent>
+        <CardFooter className="flex flex-col gap-3 border-t border-border/50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">显示 {total ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, total)} / {total} 条</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={String(pageSize)} onValueChange={changePageSize}><SelectTrigger className="w-28 h-8 text-xs" aria-label="每页数量"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{[10, 20, 30, 50, 100].map((size) => <SelectItem key={size} value={String(size)}>{size} 条 / 页</SelectItem>)}</SelectGroup></SelectContent></Select>
+            <Button variant="outline" size="sm" className="rounded-lg h-8 text-xs" onClick={() => changePage(page - 1)} disabled={page <= 1 || loading}><ChevronLeft className="size-3.5" data-icon="inline-start" />上一页</Button>
+            <span className="min-w-20 text-center text-xs text-muted-foreground">第 {page} / {totalPages} 页</span>
+            <Button variant="outline" size="sm" className="rounded-lg h-8 text-xs" onClick={() => changePage(page + 1)} disabled={page >= totalPages || loading}>下一页<ChevronRight className="size-3.5" data-icon="inline-end" /></Button>
+          </div>
+        </CardFooter>
+      </Card>
 
       <Dialog open={statisticsOpen} onOpenChange={setStatisticsOpen}>
         <DialogContent className="max-w-3xl">
