@@ -18,6 +18,10 @@ echo "============================================"
 mkdir -p /var/lib/php/sessions
 chown www-data:www-data /var/lib/php/sessions
 
+mkdir -p /var/www/html/assets/uploads/guaji
+chown -R www-data:www-data /var/www/html/assets/uploads
+chmod 775 /var/www/html/assets/uploads /var/www/html/assets/uploads/guaji
+
 # ============================================
 # 0. 从镜像同步代码到 volume（首次部署/镜像更新）
 # ============================================

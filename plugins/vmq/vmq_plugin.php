@@ -32,7 +32,7 @@ class vmq_plugin
 	];
 
 	static public function submit(){
-		global $siteurl, $channel, $order, $ordername, $sitename, $conf;
+		global $siteurl, $channel, $order, $conf;
 
 		if($order['typename']=='alipay'){
 			$paytype='2';
@@ -42,33 +42,36 @@ class vmq_plugin
 			$paytype='1';
 		}elseif($order['typename']=='bank'){
 			$paytype='3';
+		}else{
+			return ['type'=>'error','msg'=>'V免签不支持该支付方式'];
 		}
-		
-		$apiurl = $channel['appurl'].'createOrder';
+
+		$param = '';
+		$price = (string)$order['realmoney'];
 		$data = array(
-			"mchId" => $channel['appid'],
-			"payId" => TRADE_NO,
-			"type" => $paytype,
-			"price" => $order['realmoney'],
-			"isHtml" => '1',
-			"notifyUrl" => $conf['localurl'].'pay/notify/'.TRADE_NO.'/',
-			"returnUrl" => $siteurl.'pay/return/'.TRADE_NO.'/',
+			'payId' => TRADE_NO,
+			'param' => $param,
+			'type' => $paytype,
+			'price' => $price,
+			'isHtml' => '0',
+			'notifyUrl' => $conf['localurl'].'pay/notify/'.TRADE_NO.'/',
+			'returnUrl' => $siteurl.'pay/return/'.TRADE_NO.'/',
 		);
-		
-		$data["sign"] = md5($data['payId'].$data['type'].$data['price'].$channel['appkey']);
+		$data['sign'] = md5($data['payId'].$data['param'].$data['type'].$data['price'].$channel['appkey']);
 
-        if (is_https() && substr($apiurl, 0, 7)=='http://') {
-			$jump_url = $apiurl.'?'.http_build_query($data);
-			return ['type'=>'jump','url'=>$jump_url];
-        }else{
-			$html_text = '<form action="'.$apiurl.'" method="post" id="dopay">';
-			foreach($data as $k => $v) {
-				$html_text .= "<input type=\"hidden\" name=\"{$k}\" value=\"{$v}\" />\n";
-			}
-			$html_text .= '<input type="submit" value="正在跳转"></form><script>document.getElementById("dopay").submit();</script>';
-
-			return ['type'=>'html','data'=>$html_text];
+		$resp = get_curl($channel['appurl'].'createOrder', http_build_query($data));
+		$json = json_decode($resp, true);
+		if(!is_array($json)){
+			return ['type'=>'error','msg'=>'V免签无响应，请检查接口地址'];
 		}
+		if(intval($json['code'] ?? 0) !== 1){
+			return ['type'=>'error','msg'=>'V免签下单失败：'.($json['msg'] ?? $resp)];
+		}
+		$orderId = $json['data']['orderId'] ?? '';
+		if($orderId === ''){
+			return ['type'=>'error','msg'=>'V免签未返回订单号'];
+		}
+		return ['type'=>'jump','url'=>$channel['appurl'].'payPage/pay.html?orderId='.urlencode($orderId)];
 	}
 
 	//异步回调

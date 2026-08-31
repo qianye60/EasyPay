@@ -96,6 +96,72 @@ class Payment {
         echo $html;
     }
 
+    static private function decodeQrPayload($url){
+        if(!is_string($url) || $url === '') return null;
+        if(strpos($url, 'data:image/') !== 0) return $url;
+        if(!preg_match('#^data:image/[^;]+;base64,(.+)$#s', $url, $m)) return null;
+        $blob = base64_decode($m[1], true);
+        if($blob === false || $blob === '') return null;
+        require_once SYSTEM_ROOT.'qrcodedecoder/bootstrap.php';
+        try {
+            $reader = new \Zxing\QrReader($blob, \Zxing\QrReader::SOURCE_TYPE_BLOB, false);
+            $text = $reader->text();
+            if(is_string($text)){
+                $text = trim($text);
+                if($text !== '') return $text;
+            }
+        } catch (\Throwable $e) {}
+        return null;
+    }
+
+    static private function renderQrCheckoutIfPossible($page, $codeUrl, $vars){
+        global $sitename, $order;
+        $qrPages = ['alipay_qrcode','alipay_qrcodepc','wxpay_qrcode','qqpay_qrcode','bank_qrcode','jdpay_qrcode','douyinpay_qrcode'];
+        if(!in_array($page, $qrPages, true)) return false;
+        $payload = self::decodeQrPayload($codeUrl);
+        if(!$payload || strpos($payload, 'data:image/') === 0) return false;
+
+        extract($vars, EXTR_SKIP);
+        $titleMap = [
+            'alipay_qrcode' => '支付宝扫码支付',
+            'alipay_qrcodepc' => '支付宝扫码支付',
+            'wxpay_qrcode' => '微信扫码支付',
+            'qqpay_qrcode' => 'QQ扫码支付',
+            'bank_qrcode' => '网银扫码支付',
+            'jdpay_qrcode' => '京东扫码支付',
+            'douyinpay_qrcode' => '抖音扫码支付',
+        ];
+        $payTypeMap = [
+            'alipay_qrcode' => 'alipay',
+            'alipay_qrcodepc' => 'alipay',
+            'wxpay_qrcode' => 'wxpay',
+            'qqpay_qrcode' => 'qqpay',
+            'bank_qrcode' => 'bank',
+            'jdpay_qrcode' => 'jdpay',
+            'douyinpay_qrcode' => 'douyinpay',
+        ];
+        $expireSeconds = 600;
+        $addts = !empty($order['addtime']) ? strtotime($order['addtime']) : time();
+        $config = [
+            'page' => $page,
+            'title' => isset($titleMap[$page]) ? $titleMap[$page] : '扫码支付',
+            'sitename' => $sitename ?: 'Rainbow Pay',
+            'codeUrl' => $payload,
+            'amount' => $order['realmoney'] ?? $order['money'] ?? '0.00',
+            'tradeNo' => $order['trade_no'] ?? (defined('TRADE_NO') ? TRADE_NO : ''),
+            'productName' => $order['name'] ?? '',
+            'merchantName' => $sitename ?: '',
+            'createdAt' => $order['addtime'] ?? '',
+            'expireAt' => $addts + $expireSeconds,
+            'payType' => isset($payTypeMap[$page]) ? $payTypeMap[$page] : 'wxpay',
+        ];
+        $ver = @filemtime(ROOT.'assets/dist/epay-ui.css') ?: time();
+        $json = htmlspecialchars(json_encode($config, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8');
+        $title = htmlspecialchars($config['title'].' | '.$config['sitename'], ENT_QUOTES, 'UTF-8');
+        echo '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"><meta name="color-scheme" content="light dark"><title>'.$title.'</title><link rel="stylesheet" href="/assets/dist/epay-ui.css?v='.$ver.'"></head><body><div id="epay-react-root" data-epay-view="qr-checkout" data-epay-config="'.$json.'"></div><script type="module" src="/assets/dist/epay-ui.js?v='.$ver.'"></script></body></html>';
+        return true;
+    }
+
     //生成待签名字符串
     static private function getSignContent($data){
         ksort($data);
@@ -244,6 +310,9 @@ class Payment {
                 }
                 if(!in_array($result['page'], $allowed_pages)) {
                     showerror('invalid page');
+                }
+                if($type === 'qrcode' && self::renderQrCheckoutIfPossible($result['page'], $code_url, get_defined_vars())){
+                    break;
                 }
                 self::renderLegacyPaymentPage($result['page'], get_defined_vars());
                 break;

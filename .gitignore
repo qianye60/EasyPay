@@ -1,7 +1,9 @@
 /.env
 /config.php
 /.local-ops.md
+/.local-setup/
 /install/install.lock
+/plugins/guajibao/static/
 cache/
 *.log
 lakala_log.txt

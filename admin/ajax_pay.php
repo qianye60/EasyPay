@@ -20,14 +20,46 @@ function checkPluginSupportType($typeid, $plugin){
 		return ['code'=>-1, 'msg'=>'当前支付方式不存在！'];
 
 	$row = $DB->getRow("SELECT types FROM pre_plugin WHERE name=:name LIMIT 1", [':name'=>$plugin]);
-	if(!$row)
-		return ['code'=>-1, 'msg'=>'当前支付插件不存在！'];
-
-	$types = array_filter(array_map('trim', explode(',', $row['types'] ?? '')));
+	if($row){
+		$types = array_filter(array_map('trim', explode(',', $row['types'] ?? '')));
+	}else{
+		$pluginConfig = \lib\Plugin::getConfig($plugin);
+		if(!$pluginConfig) return ['code'=>-1, 'msg'=>'当前支付插件不存在！'];
+		$types = $pluginConfig['types'] ?? [];
+	}
 	if(!in_array($type, $types, true))
 		return ['code'=>-1, 'msg'=>'当前插件不支持该支付方式，请检查支付方式调用值'];
 
 	return ['code'=>0, 'msg'=>'succ'];
+}
+
+function channelConfigFromPost(){
+	$config = isset($_POST['config']) && is_array($_POST['config']) ? $_POST['config'] : [];
+	$result = ['config'=>json_encode($config, JSON_UNESCAPED_UNICODE), 'has_config'=>!empty($config) || isset($_POST['save_config']), 'has_apptype'=>isset($_POST['isapptype']), 'has_appwxmp'=>isset($_POST['appwxmp']), 'has_appwxa'=>isset($_POST['appwxa'])];
+	if(isset($_POST['isapptype'])){
+		$result['apptype'] = isset($_POST['apptype']) && is_array($_POST['apptype']) ? implode(',', array_map('trim', $_POST['apptype'])) : '';
+	}
+	if($result['has_appwxmp']) $result['appwxmp'] = intval($_POST['appwxmp']);
+	if($result['has_appwxa']) $result['appwxa'] = intval($_POST['appwxa']);
+	return $result;
+}
+
+function paymentTypeShowname($name){
+	$labels = ['usdt.trc20'=>'USDT (TRC20)','usdc.trc20'=>'USDC (TRC20)','usdt.bep20'=>'USDT (BEP20)','usdc.bep20'=>'USDC (BEP20)','usdt.erc20'=>'USDT (ERC20)','usdc.erc20'=>'USDC (ERC20)','tron.trx'=>'TRX','bsc.bnb'=>'BNB','ethereum.eth'=>'ETH'];
+	return $labels[$name] ?? $name;
+}
+
+function resolveChannelType($value, $plugin){
+	global $DB;
+	$value = trim((string)$value);
+	if(strpos($value, 'new:') !== 0) return intval($value);
+	$name = substr($value, 4);
+	if(!preg_match('/^[a-zA-Z0-9_.-]+$/', $name)) return 0;
+	$pluginConfig = \lib\Plugin::getConfig($plugin);
+	if(!$pluginConfig || !in_array($name, $pluginConfig['types'] ?? [], true)) return 0;
+	$id = $DB->getColumn("SELECT id FROM pre_type WHERE name=:name AND device=0 ORDER BY id ASC LIMIT 1", [':name'=>$name]);
+	if($id) return intval($id);
+	return intval($DB->insert('type', ['name'=>$name,'showname'=>paymentTypeShowname($name),'device'=>0,'status'=>0]));
 }
 
 switch($act){
@@ -57,7 +89,7 @@ case 'channelList':
 		$params[':f_kw_like'] = '%'.$kw.'%';
 	}
 	$where = implode(' AND ', $conditions);
-	$list = $DB->getAll("SELECT A.*,B.name typename,B.showname typeshowname FROM pre_channel A LEFT JOIN pre_type B ON A.type=B.id WHERE {$where} ORDER BY id DESC", $params);
+	$list = $DB->getAll("SELECT A.*,B.name typename,B.showname typeshowname,IF(A.config IS NULL OR A.config='' OR A.config='{}','未配置','已配置') configstatus FROM pre_channel A LEFT JOIN pre_type B ON A.type=B.id WHERE {$where} ORDER BY id DESC", $params);
 	exit(json_encode($list));
 break;
 
@@ -219,11 +251,12 @@ case 'delChannel':
 	else exit('{"code":-1,"msg":"删除支付通道失败['.$DB->error().']"}');
 break;
 case 'saveChannel':
+	$_POST['plugin'] = trim((string)($_POST['plugin'] ?? ''));
 	if($_POST['action'] == 'add'){
 		$name=trim($_POST['name']);
 		$rate=trim($_POST['rate']);
 		$costrate=trim($_POST['costrate']);
-		$type=intval($_POST['type']);
+		$typeValue=$_POST['type'] ?? '';
 		$plugin=trim($_POST['plugin']);
 		$daytop=intval($_POST['daytop']);
 		$mode=intval($_POST['mode']);
@@ -231,7 +264,7 @@ case 'saveChannel':
 		$paymax=trim($_POST['paymax']);
 		$daymaxorder=intval($_POST['daymaxorder']);
 		$timestart=!isNullOrEmpty($_POST['timestart'])?trim($_POST['timestart']):null;
-		$timestop=!isNullOrEmpty($_POST['timestart'])?trim($_POST['timestop']):null;
+		$timestop=!isNullOrEmpty($_POST['timestop'])?trim($_POST['timestop']):null;
 		if(empty($rate)) $rate = 100;
 		if(!preg_match('/^[0-9.]+$/',$rate)){
 			exit('{"code":-1,"msg":"分成比例不符合规则"}');
@@ -248,10 +281,21 @@ case 'saveChannel':
 		$row=$DB->getRow("SELECT * FROM pre_channel WHERE name=:name LIMIT 1", [':name'=>$name]);
 		if($row)
 			exit('{"code":-1,"msg":"支付通道名称重复"}');
+		$type=resolveChannelType($typeValue, $plugin);
+		if($type <= 0) exit(json_encode(['code'=>-1,'msg'=>'当前支付方式不存在或插件不支持该类型'], JSON_UNESCAPED_UNICODE));
 		$support = checkPluginSupportType($type, $plugin);
 		if($support['code'] != 0) exit(json_encode($support, JSON_UNESCAPED_UNICODE));
 		$data = ['name'=>$name, 'rate'=>$rate, 'costrate'=>$costrate, 'mode'=>$mode, 'type'=>$type, 'plugin'=>$plugin, 'daytop'=>$daytop, 'paymin'=>$paymin, 'paymax'=>$paymax, 'daymaxorder'=>$daymaxorder, 'timestart'=>$timestart, 'timestop'=>$timestop];
-		if($DB->insert('channel', $data))exit('{"code":0,"msg":"新增支付通道成功！"}');
+		$pluginData = channelConfigFromPost();
+		if($pluginData['has_config']) $data['config'] = $pluginData['config'];
+		if($pluginData['has_apptype']) $data['apptype'] = $pluginData['apptype'];
+		if($pluginData['has_appwxmp']) $data['appwxmp'] = $pluginData['appwxmp'];
+		if($pluginData['has_appwxa']) $data['appwxa'] = $pluginData['appwxa'];
+		$insertId = $DB->insert('channel', $data);
+		if($insertId){
+			if(isset($_POST['enable_type'])) $DB->exec("UPDATE pre_type SET status=:status WHERE id=:id", [':status'=>intval($_POST['enable_type']) ? 1 : 0, ':id'=>$type]);
+			exit(json_encode(['code'=>0,'msg'=>'新增支付通道成功！','id'=>(int)$insertId], JSON_UNESCAPED_UNICODE));
+		}
 		else exit('{"code":-1,"msg":"新增支付通道失败['.$DB->error().']"}');
 	}elseif($_POST['action'] == 'copy'){
 		$id=intval($_POST['id']);
@@ -260,7 +304,7 @@ case 'saveChannel':
 		$name=trim($_POST['name']);
 		$rate=trim($_POST['rate']);
 		$costrate=trim($_POST['costrate']);
-		$type=intval($_POST['type']);
+		$typeValue=$_POST['type'] ?? '';
 		$plugin=trim($_POST['plugin']);
 		$daytop=intval($_POST['daytop']);
 		$mode=intval($_POST['mode']);
@@ -268,7 +312,7 @@ case 'saveChannel':
 		$paymax=trim($_POST['paymax']);
 		$daymaxorder=intval($_POST['daymaxorder']);
 		$timestart=!isNullOrEmpty($_POST['timestart'])?trim($_POST['timestart']):null;
-		$timestop=!isNullOrEmpty($_POST['timestart'])?trim($_POST['timestop']):null;
+		$timestop=!isNullOrEmpty($_POST['timestop'])?trim($_POST['timestop']):null;
 		if(!preg_match('/^[0-9.]+$/',$rate)){
 			exit('{"code":-1,"msg":"分成比例不符合规则"}');
 		}
@@ -284,10 +328,21 @@ case 'saveChannel':
 		$nrow=$DB->getRow("SELECT * FROM pre_channel WHERE name=:name LIMIT 1", [':name'=>$name]);
 		if($nrow)
 			exit('{"code":-1,"msg":"支付通道名称重复"}');
+		$type=resolveChannelType($typeValue, $plugin);
+		if($type <= 0) exit(json_encode(['code'=>-1,'msg'=>'当前支付方式不存在或插件不支持该类型'], JSON_UNESCAPED_UNICODE));
 		$support = checkPluginSupportType($type, $plugin);
 		if($support['code'] != 0) exit(json_encode($support, JSON_UNESCAPED_UNICODE));
 		$data = ['name'=>$name, 'rate'=>$rate, 'costrate'=>$costrate, 'mode'=>$mode, 'type'=>$type, 'plugin'=>$plugin, 'daytop'=>$daytop, 'paymin'=>$paymin, 'paymax'=>$paymax, 'daymaxorder'=>$daymaxorder, 'config'=>$row['config'], 'apptype'=>$row['apptype'], 'appwxmp'=>$row['appwxmp'], 'appwxa'=>$row['appwxa'], 'timestart'=>$timestart, 'timestop'=>$timestop];
-		if($DB->insert('channel', $data))exit('{"code":0,"msg":"复制支付通道成功！"}');
+		$pluginData = channelConfigFromPost();
+		if($pluginData['has_config']) $data['config'] = $pluginData['config'];
+		if($pluginData['has_apptype']) $data['apptype'] = $pluginData['apptype'];
+		if($pluginData['has_appwxmp']) $data['appwxmp'] = $pluginData['appwxmp'];
+		if($pluginData['has_appwxa']) $data['appwxa'] = $pluginData['appwxa'];
+		$insertId = $DB->insert('channel', $data);
+		if($insertId){
+			if(isset($_POST['enable_type'])) $DB->exec("UPDATE pre_type SET status=:status WHERE id=:id", [':status'=>intval($_POST['enable_type']) ? 1 : 0, ':id'=>$type]);
+			exit(json_encode(['code'=>0,'msg'=>'复制支付通道成功！','id'=>(int)$insertId], JSON_UNESCAPED_UNICODE));
+		}
 		else exit('{"code":-1,"msg":"复制支付通道失败['.$DB->error().']"}');
 	}elseif($_POST['action'] == 'edit'){
 		$id=intval($_POST['id']);
@@ -296,7 +351,7 @@ case 'saveChannel':
 		$name=trim($_POST['name']);
 		$rate=trim($_POST['rate']);
 		$costrate=trim($_POST['costrate']);
-		$type=intval($_POST['type']);
+		$typeValue=$_POST['type'] ?? '';
 		$plugin=trim($_POST['plugin']);
 		$daytop=intval($_POST['daytop']);
 		$mode=intval($_POST['mode']);
@@ -304,7 +359,7 @@ case 'saveChannel':
 		$paymax=trim($_POST['paymax']);
 		$daymaxorder=intval($_POST['daymaxorder']);
 		$timestart=!isNullOrEmpty($_POST['timestart'])?trim($_POST['timestart']):null;
-		$timestop=!isNullOrEmpty($_POST['timestart'])?trim($_POST['timestop']):null;
+		$timestop=!isNullOrEmpty($_POST['timestop'])?trim($_POST['timestop']):null;
 		if(!preg_match('/^[0-9.]+$/',$rate)){
 			exit('{"code":-1,"msg":"分成比例不符合规则"}');
 		}
@@ -320,16 +375,70 @@ case 'saveChannel':
 		$nrow=$DB->getRow("SELECT * FROM pre_channel WHERE name=:name AND id<>:id LIMIT 1", [':name'=>$name, ':id'=>$id]);
 		if($nrow)
 			exit('{"code":-1,"msg":"支付通道名称重复"}');
+		$type=resolveChannelType($typeValue, $plugin);
+		if($type <= 0) exit(json_encode(['code'=>-1,'msg'=>'当前支付方式不存在或插件不支持该类型'], JSON_UNESCAPED_UNICODE));
 		$support = checkPluginSupportType($type, $plugin);
 		if($support['code'] != 0) exit(json_encode($support, JSON_UNESCAPED_UNICODE));
 		$data = ['name'=>$name, 'rate'=>$rate, 'costrate'=>$costrate, 'mode'=>$mode, 'type'=>$type, 'plugin'=>$plugin, 'daytop'=>$daytop, 'paymin'=>$paymin, 'paymax'=>$paymax, 'daymaxorder'=>$daymaxorder, 'timestart'=>$timestart, 'timestop'=>$timestop];
+		$pluginData = channelConfigFromPost();
+		if($pluginData['has_config']) $data['config'] = $pluginData['config'];
+		if($pluginData['has_apptype']) $data['apptype'] = $pluginData['apptype'];
+		if($pluginData['has_appwxmp']) $data['appwxmp'] = $pluginData['appwxmp'];
+		if($pluginData['has_appwxa']) $data['appwxa'] = $pluginData['appwxa'];
 		if($DB->update('channel', $data, ['id'=>$id])!==false){
+			if(isset($_POST['enable_type'])) $DB->exec("UPDATE pre_type SET status=:status WHERE id=:type", [':status'=>intval($_POST['enable_type']) ? 1 : 0, ':type'=>$type]);
 			if($row['daystatus']==1 && ($daytop==0 || $daytop>$row['daytop'] || $daymaxorder==0)){
 				$DB->exec("UPDATE pre_channel SET daystatus=0 WHERE id=:id", [':id'=>$id]);
 			}
 			exit('{"code":0,"msg":"修改支付通道成功！"}');
 		}else exit('{"code":-1,"msg":"修改支付通道失败['.$DB->error().']"}');
 	}
+break;
+case 'channelEditorInfo':
+	$id = intval($_GET['id'] ?? 0);
+	$selectedType = trim((string)($_GET['type'] ?? ''));
+	$selectedPlugin = trim((string)($_GET['plugin'] ?? ''));
+	// 插件声明的支付类型是事实来源；数据库尚未登记的类型以虚拟候选项展示，保存通道时再正式写入。
+	$knownTypes = [];
+	$pluginRows = $DB->getAll("SELECT name,showname,types FROM pre_plugin ORDER BY name ASC");
+	foreach($DB->getAll("SELECT id,name,showname,device,status FROM pre_type ORDER BY id ASC") as $type) $knownTypes[$type['name']] = $type;
+	foreach($pluginRows as $pluginRow){
+		foreach(array_filter(array_map('trim', explode(',', (string)$pluginRow['types']))) as $typeName){
+			$typeName = trim((string)$typeName);
+			if($typeName === '' || isset($knownTypes[$typeName])) continue;
+			$knownTypes[$typeName] = ['id'=>'new:'.$typeName,'name'=>$typeName,'showname'=>paymentTypeShowname($typeName),'device'=>0,'status'=>0,'virtual'=>true];
+		}
+	}
+	$types = array_values($knownTypes);
+	$channel = $id > 0 ? $DB->getRow("SELECT * FROM pre_channel WHERE id=:id LIMIT 1", [':id'=>$id]) : [];
+	if($id > 0 && !$channel) exit(json_encode(['code'=>-1,'msg'=>'当前支付通道不存在！'], JSON_UNESCAPED_UNICODE));
+	$typeValue = $selectedType ?: (string)($channel['type'] ?? '');
+	$typeId = strpos($typeValue, 'new:') === 0 ? 0 : intval($typeValue);
+	$pluginName = $selectedPlugin ?: (string)($channel['plugin'] ?? '');
+	$typename = strpos($typeValue, 'new:') === 0 ? substr($typeValue, 4) : ($typeId ? $DB->getColumn("SELECT name FROM pre_type WHERE id=:id", [':id'=>$typeId]) : '');
+	$plugin = $pluginName ? \lib\Plugin::getConfig($pluginName) : false;
+	$fields = [];
+	$reuseConfig = $channel && $pluginName === (string)($channel['plugin'] ?? '') && $typeValue === (string)($channel['type'] ?? '');
+	$config = $reuseConfig && !empty($channel['config']) ? json_decode($channel['config'], true) : [];
+	if($plugin){
+		$selectList = !empty($plugin['select_'.$typename]) ? $plugin['select_'.$typename] : ($plugin['select'] ?? []);
+		if(is_array($selectList) && count($selectList) > 0) $fields[] = ['key'=>'apptype','label'=>'可用接口','type'=>'checkbox','value'=>$reuseConfig ? array_filter(explode(',', (string)($channel['apptype'] ?? ''))) : [],'options'=>$selectList,'required'=>true];
+		foreach(($plugin['inputs'] ?? []) as $key=>$input){
+			$fieldType = in_array($input['type'] ?? 'text', ['textarea','select','checkbox'], true) ? $input['type'] : 'text';
+			$fields[] = ['key'=>$key,'label'=>(string)($input['name'] ?? $key),'type'=>$fieldType,'value'=>$config[$key] ?? '','note'=>(string)($input['note'] ?? ''),'options'=>$input['options'] ?? []];
+		}
+		if(!empty($plugin['bindwxmp']) && $typeId == 2){
+			$bindOptions = ['0'=>'不绑定'];
+			foreach($DB->getAll("SELECT id,name,appid FROM pre_weixin WHERE type=0 ORDER BY id ASC") as $wx) $bindOptions[(string)$wx['id']] = $wx['name'].'（'.$wx['appid'].'）';
+			$fields[] = ['key'=>'appwxmp','label'=>'绑定微信公众号','type'=>'select','value'=>(string)($channel['appwxmp'] ?? 0),'options'=>$bindOptions];
+		}
+		if(!empty($plugin['bindwxa']) && $typeId == 2){
+			$bindOptions = ['0'=>'不绑定'];
+			foreach($DB->getAll("SELECT id,name,appid FROM pre_weixin WHERE type=1 ORDER BY id ASC") as $wx) $bindOptions[(string)$wx['id']] = $wx['name'].'（'.$wx['appid'].'）';
+			$fields[] = ['key'=>'appwxa','label'=>'绑定微信小程序','type'=>'select','value'=>(string)($channel['appwxa'] ?? 0),'options'=>$bindOptions];
+		}
+	}
+	exit(json_encode(['code'=>0,'msg'=>'succ','data'=>['id'=>$id,'types'=>$types,'plugins'=>$pluginRows,'channel'=>$channel,'fields'=>$fields]], JSON_UNESCAPED_UNICODE));
 break;
 case 'channelInfo':
 	$id=intval($_GET['id']);

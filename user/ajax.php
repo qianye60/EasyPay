@@ -73,7 +73,7 @@ case 'login':
 	}
 	if($type==1 && is_numeric($user) && strlen($user)<=6)$type=0;
 	if($type==1){
-		$userrow=$DB->getRow("SELECT * FROM pre_user WHERE email=:user OR phone=:user limit 1", [':user'=>$user]);
+		$userrow=$DB->getRow("SELECT * FROM pre_user WHERE email=:user OR phone=:user OR username=:user limit 1", [':user'=>$user]);
 	}else{
 		if($conf['close_keylogin']==1)exit('{"code":-1,"msg":"未开启密钥登录，请使用账号密码登录！"}');
 		$userrow=$DB->getRow("SELECT * FROM pre_user WHERE uid=:user limit 1", [':user'=>$user]);

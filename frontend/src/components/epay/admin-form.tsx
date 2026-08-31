@@ -12,6 +12,12 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Field,
   FieldDescription,
   FieldGroup,
@@ -151,7 +157,7 @@ export function AdminFormView({ config = {} }: { config?: AdminFormConfig }) {
   </Field>)}</FieldGroup>
 
   return <div className="min-w-0 w-full"><div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-    <header className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs text-muted-foreground">{sitename}</p><h1 className="mt-1 text-2xl font-semibold tracking-tight">{title}</h1><p className="mt-1 max-w-3xl text-sm text-muted-foreground">{description}</p></div>{config.links?.length ? <div className="flex flex-wrap gap-2">{config.links.map((link) => <Button key={link.href} asChild variant="outline" className="rounded-xl"><a href={link.href}>{link.label}</a></Button>)}</div> : null}</header>
+    <header className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs text-muted-foreground">{sitename}</p><h1 className="mt-1 text-2xl font-semibold tracking-tight">{title}</h1><p className="mt-1 max-w-3xl text-sm text-muted-foreground">{description}</p></div>{config.links?.length ? <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" className="rounded-xl">相关配置</Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="max-h-80 w-52 overflow-y-auto">{config.links.map((link) => <DropdownMenuItem key={link.href} asChild><a href={link.href}>{link.label}</a></DropdownMenuItem>)}</DropdownMenuContent></DropdownMenu> : null}</header>
     {config.notice ? <Alert><AlertTitle>说明</AlertTitle><AlertDescription>{config.notice}</AlertDescription></Alert> : null}
     {notice ? <Alert variant={notice.kind === "error" ? "destructive" : "default"}><AlertTitle>{notice.kind === "error" ? "保存失败" : "保存成功"}</AlertTitle><AlertDescription>{notice.text}</AlertDescription></Alert> : null}
     <Card className="rounded-2xl shadow-sm"><CardHeader className="border-b"><CardTitle>{title}</CardTitle><CardDescription>{description}</CardDescription></CardHeader><form action={action?.endpoint} method={action?.method ?? "POST"} encType={fields.some((field) => field.type === "file") ? "multipart/form-data" : undefined} onSubmit={submit}>

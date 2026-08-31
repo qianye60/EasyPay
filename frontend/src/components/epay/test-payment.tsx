@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { ArrowLeft, CheckCircle2, CreditCard, ShieldCheck } from "lucide-react"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -28,12 +29,47 @@ export function TestPaymentView({
 }: {
   config?: TestPaymentConfig
 }) {
-  const submit = (target: HTMLButtonElement) => {
-    const legacyWindow = window as Window & {
-      submitPay?: (element: HTMLButtonElement) => void
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState("")
+
+  const submit = async (target: HTMLButtonElement) => {
+    const form = target.form ?? document.querySelector("form[name='alipayment']")
+    const moneyInput = form?.querySelector<HTMLInputElement>("input[name='money']")
+    const money = moneyInput?.value?.trim() ?? ""
+    const typeid = target.value
+    if (!money) {
+      setError("金额不能为空")
+      return
     }
-    legacyWindow.submitPay?.(target)
+    setPending(true)
+    setError("")
+    try {
+      const body = new URLSearchParams({
+        money,
+        typeid,
+        csrf_token: config.csrf_token ?? "",
+      })
+      const response = await fetch("ajax.php?act=testpay", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        },
+        body,
+      })
+      const data = (await response.json()) as { code?: number; msg?: string; url?: string }
+      if (data.code === 0 && data.url) {
+        window.location.href = data.url
+        return
+      }
+      setError(data.msg || "创建测试订单失败")
+    } catch {
+      setError("服务器错误")
+    } finally {
+      setPending(false)
+    }
   }
+
   return (
     <div className="min-h-svh bg-muted/30 px-4 py-8 text-foreground sm:px-6 lg:py-12">
       <div className="mx-auto max-w-2xl">
@@ -110,6 +146,11 @@ export function TestPaymentView({
                   />
                 </div>
               </Field>
+              {error ? (
+                <Alert variant="destructive" className="rounded-xl">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
               {config.paid ? (
                 <Alert className="rounded-xl border-primary/30 bg-primary/5">
                   <CheckCircle2 className="text-primary" />
@@ -150,7 +191,8 @@ export function TestPaymentView({
                         value={String(type.id)}
                         variant="outline"
                         className="h-12 justify-start rounded-xl"
-                        onClick={(event) => submit(event.currentTarget)}
+                        disabled={pending}
+                        onClick={(event) => void submit(event.currentTarget)}
                       >
                         <img
                           src={`/assets/icon/${type.name ?? ""}.ico`}

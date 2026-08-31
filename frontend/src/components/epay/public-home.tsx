@@ -53,7 +53,7 @@ function Brand({ name }: { name: string }) {
           {name}
         </span>
         <span className="block text-[11px] text-muted-foreground">
-          支付运营工作台
+          商户自收款 · 回调监听
         </span>
       </span>
     </a>
@@ -61,9 +61,9 @@ function Brand({ name }: { name: string }) {
 }
 
 const navItems = [
-  ["核心能力", "#capabilities"],
-  ["合作生态", "#partners"],
-  ["开发文档", "/doc.html"],
+  ["产品能力", "#capabilities"],
+  ["收款渠道", "#partners"],
+  ["开发文档", "/doc_old.html"],
 ] as const
 
 export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
@@ -72,7 +72,7 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
   const description = textOf(
     config,
     "description",
-    "提供免签约支付宝、QQ 钱包、微信支付，帮助商户更快接入、更稳收款。"
+    "商户用自己的微信、支付宝收款码收款。平台提供到账监听、订单回调，后续还将支持支付宝云端渠道，扫码登录即可收款，无需再下载挂机软件。"
   )
   const testOpen =
     config.test_open === true ||
@@ -175,7 +175,7 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
                 variant="secondary"
                 className="mb-6 h-auto max-w-full rounded-lg px-3 py-1.5 text-center leading-5 whitespace-normal tracking-wide"
               >
-                PAYMENT INFRASTRUCTURE · READY FOR BUSINESS
+                PAYMENT · MERCHANT COLLECT · CALLBACK MONITOR
               </Badge>
               <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
                 {title}
@@ -186,7 +186,7 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Button asChild size="lg" className="h-12 rounded-xl px-6">
                   <a href="/user/reg.php">
-                    开始接入
+                    注册商户收款
                     <ArrowRight data-icon="inline-end" />
                   </a>
                 </Button>
@@ -201,21 +201,21 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
               </div>
               <div className="mt-10 grid max-w-xl gap-4 border-t pt-6 sm:grid-cols-3">
                 <div>
-                  <p className="text-sm font-medium">多渠道</p>
+                  <p className="text-sm font-medium">商户自收款</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    支付宝 · 微信 · QQ
+                    钱进你的微信 / 支付宝
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium">低门槛</p>
+                  <p className="text-sm font-medium">回调监听</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    统一接口快速接入
+                    到账自动通知订单
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium">可追踪</p>
+                  <p className="text-sm font-medium">即将上线</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    订单与结算实时可见
+                    云端渠道扫码登录
                   </p>
                 </div>
               </div>
@@ -224,8 +224,8 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
               <CardHeader className="border-b">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardDescription>运营工作台</CardDescription>
-                    <CardTitle className="mt-1 text-xl">收款状态总览</CardTitle>
+                    <CardDescription>商户工作台</CardDescription>
+                    <CardTitle className="mt-1 text-xl">自收款状态总览</CardTitle>
                   </div>
                   <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <BarChart3 className="size-5" />
@@ -251,7 +251,7 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
                 </div>
                 <div className="rounded-2xl border p-4">
                   <div className="mb-3 flex items-center justify-between text-sm">
-                    <span className="font-medium">渠道运行状态</span>
+                    <span className="font-medium">监听服务</span>
                     <Badge
                       variant="secondary"
                       className="rounded-lg font-normal"
@@ -277,7 +277,7 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
                 <div className="flex items-center gap-3 rounded-2xl bg-muted/50 p-4">
                   <ShieldCheck className="size-5 text-primary" />
                   <p className="text-sm text-muted-foreground">
-                    安全风控、订单通知与结算流程统一管理
+                    安全风控、到账回调与监听套餐统一管理
                   </p>
                 </div>
               </CardContent>
@@ -294,30 +294,30 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
               CORE CAPABILITIES
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-              一套平台，连接主流支付场景
+              一套平台，服务商户自己收款
             </h2>
             <p className="mt-4 leading-7 text-muted-foreground">
-              从收款、结算到风控，把复杂的支付流程交给平台处理。
+              从自有收款码、到账监听到订单回调，把复杂的支付对接交给平台。
             </p>
           </div>
           <div className="mt-10 grid gap-4 md:grid-cols-3">
             <FeatureCard
               icon={WalletCards}
               index="01"
-              title="多种支付方式"
-              description="支持支付宝、微信与 QQ 钱包，覆盖常用付款场景。"
+              title="商户自收款"
+              description="上传微信、支付宝收款码即可收款，资金直接进入商户本人账户。"
             />
             <FeatureCard
               icon={Zap}
               index="02"
-              title="快速接入"
-              description="清晰的费率规则与统一接口，降低接入和日常运营成本。"
+              title="回调与监听套餐"
+              description="平台负责到账监听和订单回调。按套餐开通服务，不经平台钱包。"
             />
             <FeatureCard
               icon={Check}
               index="03"
-              title="结算更省心"
-              description="订单、通知与结算状态实时可见，减少人工跟进。"
+              title="云端渠道即将上线"
+              description="支付宝云端扫码登录收款，无需再下载挂机宝等监控软件。"
             />
           </div>
         </section>
@@ -352,7 +352,7 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
           <div>
             <Brand name={siteName} />
             <p className="mt-4 max-w-xs text-sm leading-6 text-muted-foreground">
-              让支付接入更简单，让每一笔收款都清晰可控。
+              让支付接入更简单，让每一笔收款都清晰可控。商户自己收款，平台只做回调与监听。
             </p>
           </div>
           <div className="grid grid-cols-2 gap-x-10 gap-y-3 text-sm sm:grid-cols-3">
@@ -382,7 +382,7 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
             <div className="flex flex-col gap-3">
               <p className="font-medium">关于我们</p>
               <p className="max-w-[16rem] leading-6 text-muted-foreground">
-                {siteName}是{orgName}旗下的免签约支付产品。
+                {siteName}由{orgName}运营，为商户提供自收款与到账监听服务。
               </p>
             </div>
             <div className="flex flex-col gap-3">

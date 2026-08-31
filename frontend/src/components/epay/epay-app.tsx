@@ -3,8 +3,10 @@ import {
   Activity,
   ArrowUpRight,
   BarChart3,
+  Bell,
   BookOpen,
   Check,
+  ChevronDown,
   ChevronRight,
   CircleDollarSign,
   CreditCard,
@@ -17,7 +19,10 @@ import {
   Menu,
   Moon,
   PackageCheck,
-  PanelLeft,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Download,
+  QrCode,
   RefreshCw,
   Settings,
   ShieldCheck,
@@ -32,6 +37,7 @@ import { AuthView } from "@/components/epay/auth-view"
 import { AdminOrderView, type AdminOrderConfig } from "@/components/epay/admin-order"
 import { AdminResourceView, type AdminResourceConfig } from "@/components/epay/admin-resource"
 import { AdminFormView, AdminStatsView, type AdminFormConfig } from "@/components/epay/admin-form"
+import { AdminChannelEditorView, type AdminChannelEditorConfig } from "@/components/epay/admin-channel-editor"
 import { AdminAccountView, AdminBatchView, AdminChannelConfigView, AdminChannelTestView, AdminGroupPurchaseView, AdminMaintenanceView, AdminRollConfigView, AdminSettlementBatchView, AdminTokenView, AdminTotpView, type AdminAccountConfig, type AdminBatchConfig, type AdminChannelConfig, type AdminChannelTestConfig, type AdminGroupPurchaseConfig, type AdminMaintenanceConfig, type AdminRollConfig, type AdminSettlementBatchConfig, type AdminTokenConfig, type AdminTotpConfig } from "@/components/epay/admin-tools"
 import { GoldPlanView, type GoldPlanConfig } from "@/components/epay/gold-plan"
 import {
@@ -51,6 +57,10 @@ import {
   type PaymentStatusConfig,
 } from "@/components/epay/payment-status"
 import { PayPageView, type PayPageConfig } from "@/components/epay/pay-page"
+import {
+  QrCheckoutView,
+  type QrCheckoutConfig,
+} from "@/components/epay/qr-checkout"
 import {
   TestPaymentView,
   type TestPaymentConfig,
@@ -82,8 +92,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
   Sheet,
   SheetContent,
@@ -117,6 +138,7 @@ type EpayView =
   | "admin-account"
   | "admin-group-purchase"
   | "admin-channel-config"
+  | "admin-channel-editor"
   | "admin-channel-test"
   | "admin-totp"
   | "admin-batches"
@@ -137,6 +159,7 @@ type EpayView =
   | "public-legacy-shell"
   | "documentation-shell"
   | "pay-page"
+  | "qr-checkout"
   | "admin-login"
   | "user-login"
   | "user-register"
@@ -170,26 +193,31 @@ type NavItem = {
   external?: boolean
 }
 
-// 与 admin/head.php 中的旧版导航保持一一对应，避免新外壳吞掉原有入口。
+const sectionIcons: Record<string, React.ElementType> = {
+  概览: LayoutDashboard,
+  订单: FileText,
+  结算: WalletCards,
+  商户: Users,
+  通道: CreditCard,
+  设置: Settings,
+  日志: ShieldCheck,
+  收款: QrCode,
+  账户: Store,
+  套餐: PackageCheck,
+  其他: Activity,
+  帮助: BookOpen,
+}
+
+// 与 admin 原有入口保持对应，仅把一级菜单收成业务分组。
 const adminNav: NavItem[] = [
   { section: "概览", label: "平台首页", href: "./", icon: LayoutDashboard },
-  {
-    section: "收款订单",
-    label: "订单管理",
-    href: "./order.php",
-    icon: FileText,
-  },
+  { section: "订单", label: "订单管理", href: "./order.php", icon: FileText },
   { label: "导出订单", href: "./export.php", icon: FileText },
   { label: "支付用户统计", href: "./buyerstat.php", icon: BarChart3 },
   { label: "黑名单管理", href: "./blacklist.php", icon: ShieldCheck },
   { label: "分账规则", href: "./ps_receiver.php", icon: Settings },
   { label: "分账记录", href: "./ps_order.php", icon: FileText },
-  {
-    section: "付款管理",
-    label: "结算管理",
-    href: "./slist.php",
-    icon: PackageCheck,
-  },
+  { section: "结算", label: "结算管理", href: "./slist.php", icon: PackageCheck },
   { label: "批量结算", href: "./settle.php", icon: PackageCheck },
   { label: "付款记录", href: "./transfer.php", icon: WalletCards },
   { label: "新增付款", href: "./transfer_add.php", icon: ArrowUpRight },
@@ -203,7 +231,7 @@ const adminNav: NavItem[] = [
     icon: ShieldCheck,
     feature: "satf",
   },
-  { section: "商户管理", label: "用户列表", href: "./ulist.php", icon: Users },
+  { section: "商户", label: "用户列表", href: "./ulist.php", icon: Users },
   { label: "用户组设置", href: "./glist.php", icon: Users },
   { label: "用户组购买", href: "./group.php", icon: Store },
   { label: "资金明细", href: "./record.php", icon: BarChart3 },
@@ -220,12 +248,7 @@ const adminNav: NavItem[] = [
     icon: ShieldCheck,
     feature: "invitecode",
   },
-  {
-    section: "支付接口",
-    label: "支付通道",
-    href: "./pay_channel.php",
-    icon: CreditCard,
-  },
+  { section: "通道", label: "支付通道", href: "./pay_channel.php", icon: CreditCard },
   { label: "支付方式", href: "./pay_type.php", icon: CreditCard },
   { label: "支付插件", href: "./pay_plugin.php", icon: PackageCheck },
   { label: "支付通道轮询", href: "./pay_roll.php", icon: RefreshCw },
@@ -243,38 +266,24 @@ const adminNav: NavItem[] = [
     feature: "applyments",
   },
   { label: "企业微信账号", href: "./pay_wework.php", icon: Store },
-  {
-    section: "系统设置",
-    label: "网站信息配置",
-    href: "./set.php?mod=site",
-    icon: Settings,
-  },
-  { label: "支付相关配置", href: "./set.php?mod=pay", icon: CreditCard },
-  { label: "风控检测配置", href: "./set.php?mod=risk", icon: ShieldCheck },
-  { label: "结算规则配置", href: "./set.php?mod=settle", icon: PackageCheck },
-  { label: "转账付款配置", href: "./set.php?mod=transfer", icon: WalletCards },
-  { label: "快捷登录配置", href: "./set.php?mod=oauth", icon: Users },
-  { label: "消息提醒配置", href: "./set.php?mod=notice", icon: Activity },
-  {
-    label: "实名认证配置",
-    href: "./set.php?mod=certificate",
-    icon: ShieldCheck,
-  },
-  { label: "网站公告配置", href: "./gonggao.php", icon: FileText },
-  { label: "首页模板配置", href: "./set.php?mod=template", icon: Store },
-  { label: "邮箱与短信配置", href: "./set.php?mod=mail", icon: FileText },
-  { label: "网站 Logo 上传", href: "./set.php?mod=upimg", icon: ArrowUpRight },
-  { label: "计划任务配置", href: "./set.php?mod=cron", icon: RefreshCw },
-  { label: "中转代理配置", href: "./set.php?mod=proxy", icon: ShieldCheck },
+  { section: "设置", label: "网站信息", href: "./set.php?mod=site", icon: Settings },
+  { label: "支付配置", href: "./set.php?mod=pay", icon: CreditCard },
+  { label: "风控配置", href: "./set.php?mod=risk", icon: ShieldCheck },
+  { label: "结算规则", href: "./set.php?mod=settle", icon: PackageCheck },
+  { label: "转账付款", href: "./set.php?mod=transfer", icon: WalletCards },
+  { label: "快捷登录", href: "./set.php?mod=oauth", icon: Users },
+  { label: "消息提醒", href: "./set.php?mod=notice", icon: Bell },
+  { label: "实名认证", href: "./set.php?mod=certificate", icon: ShieldCheck },
+  { label: "网站公告", href: "./gonggao.php", icon: FileText },
+  { label: "首页模板", href: "./set.php?mod=template", icon: Store },
+  { label: "邮箱短信", href: "./set.php?mod=mail", icon: FileText },
+  { label: "网站 Logo", href: "./set.php?mod=upimg", icon: ArrowUpRight },
+  { label: "计划任务", href: "./set.php?mod=cron", icon: RefreshCw },
+  { label: "中转代理", href: "./set.php?mod=proxy", icon: ShieldCheck },
   { label: "微信客服支付", href: "./set_wxkf.php", icon: Store },
   { label: "管理员账户", href: "./set.php?mod=account", icon: Users },
   { label: "TOTP 二次验证", href: "./set_totp.php", icon: ShieldCheck },
-  {
-    section: "其他功能",
-    label: "风控记录",
-    href: "./risk.php",
-    icon: ShieldCheck,
-  },
+  { section: "日志", label: "风控记录", href: "./risk.php", icon: ShieldCheck },
   { label: "登录日志", href: "./log.php", icon: FileText },
   { label: "数据清理", href: "./clean.php", icon: RefreshCw },
   { label: "获取用户标识", href: "./gettoken.php", icon: ShieldCheck },
@@ -292,11 +301,40 @@ const adminNav: NavItem[] = [
   },
 ]
 
-// 与 user/head.php 中的用户中心、查询、其他三组入口保持一致。
 const merchantNav: NavItem[] = [
-  { section: "概览", label: "用户中心", href: "./", icon: LayoutDashboard },
+  { section: "概览", label: "工作台", href: "./", icon: LayoutDashboard },
+  { section: "收款", label: "收款通道", href: "./channel.php", icon: QrCode },
+  { label: "软件下载", href: "./softdown.php", icon: Download },
   {
-    section: "个人资料",
+    label: "聚合收款",
+    href: "./onecode.php",
+    icon: CreditCard,
+    feature: "onecode",
+  },
+  { section: "订单", label: "订单记录", href: "./order.php", icon: FileText },
+  { label: "结算记录", href: "./settle.php", icon: PackageCheck },
+  { label: "资金明细", href: "./record.php", icon: BarChart3 },
+  {
+    label: "申请提现",
+    href: "./apply.php",
+    icon: ArrowUpRight,
+    feature: "withdraw",
+  },
+  {
+    label: "余额充值",
+    href: "./recharge.php",
+    icon: CircleDollarSign,
+    feature: "recharge",
+  },
+  {
+    section: "套餐",
+    label: "监听套餐",
+    href: "./groupbuy.php",
+    icon: PackageCheck,
+    feature: "groupbuy",
+  },
+  {
+    section: "账户",
     label: "API 信息",
     href: "./userinfo.php?mod=api",
     icon: ShieldCheck,
@@ -315,32 +353,24 @@ const merchantNav: NavItem[] = [
     icon: WalletCards,
     feature: "deposit",
   },
-  { section: "查询", label: "订单记录", href: "./order.php", icon: FileText },
-  { label: "结算记录", href: "./settle.php", icon: PackageCheck },
-  { label: "资金明细", href: "./record.php", icon: BarChart3 },
-  {
-    label: "申请提现",
-    href: "./apply.php",
-    icon: ArrowUpRight,
-    feature: "withdraw",
-  },
-  {
-    label: "余额充值",
-    href: "./recharge.php",
-    icon: CircleDollarSign,
-    feature: "recharge",
-  },
-  {
-    label: "购买会员",
-    href: "./groupbuy.php",
-    icon: Store,
-    feature: "groupbuy",
-  },
   {
     label: "授权域名",
     href: "./domain.php",
     icon: ShieldCheck,
     feature: "domain",
+  },
+  {
+    section: "其他",
+    label: "代付管理",
+    href: "./transfer.php",
+    icon: ArrowUpRight,
+    feature: "transfer",
+  },
+  {
+    label: "邀请返现",
+    href: "./invite.php",
+    icon: Users,
+    feature: "invite",
   },
   {
     label: "交易投诉",
@@ -353,25 +383,6 @@ const merchantNav: NavItem[] = [
     href: "./mchrisk.php",
     icon: ShieldCheck,
     feature: "mchrisk",
-  },
-  {
-    section: "其他",
-    label: "代付管理",
-    href: "./transfer.php",
-    icon: ArrowUpRight,
-    feature: "transfer",
-  },
-  {
-    label: "聚合收款",
-    href: "./onecode.php",
-    icon: CreditCard,
-    feature: "onecode",
-  },
-  {
-    label: "邀请返现",
-    href: "./invite.php",
-    icon: Users,
-    feature: "invite",
   },
   { section: "帮助", label: "开发文档", href: "/doc.html", icon: BookOpen },
 ]
@@ -460,12 +471,39 @@ function objectOf(
   return value && typeof value === "object" ? (value as JsonObject) : {}
 }
 
+type NavGroup = {
+  id: string
+  label: string
+  icon: React.ElementType
+  items: NavItem[]
+}
+
+function groupNav(items: NavItem[]): NavGroup[] {
+  const groups: NavGroup[] = []
+  for (const item of items) {
+    if (item.section || groups.length === 0) {
+      const label = item.section || "其他"
+      groups.push({
+        id: label,
+        label,
+        icon: sectionIcons[label] || Settings,
+        items: [item],
+      })
+    } else {
+      groups[groups.length - 1].items.push(item)
+    }
+  }
+  return groups
+}
+
 function Brand({
   compact = false,
   name = "Rainbow Pay",
+  subtitle = "商户自收款",
 }: {
   compact?: boolean
   name?: string
+  subtitle?: string
 }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
@@ -475,63 +513,207 @@ function Brand({
       {!compact && (
         <div className="min-w-0 leading-tight">
           <p className="truncate font-semibold tracking-tight">{name}</p>
-          <p className="text-[11px] text-muted-foreground">支付运营工作台</p>
+          <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>
         </div>
       )}
     </div>
   )
 }
 
-function NavLinks({
+function NavLeaf({
+  item,
+  collapsed = false,
+  onNavigate,
+}: {
+  item: NavItem
+  collapsed?: boolean
+  onNavigate?: () => void
+}) {
+  const active = isNavItemActive(item.href)
+  const Icon = item.icon
+  const link = (
+    <Button
+      asChild
+      variant={active ? "secondary" : "ghost"}
+      className={cn(
+        "h-9 rounded-lg font-normal",
+        collapsed ? "size-9 justify-center px-0" : "w-full justify-start gap-2.5 px-2.5",
+        active && "font-medium"
+      )}
+    >
+      <a
+        href={item.href}
+        onClick={onNavigate}
+        aria-current={active ? "page" : undefined}
+        target={item.external ? "_blank" : undefined}
+        rel={item.external ? "noopener noreferrer" : undefined}
+      >
+        <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        {!collapsed && <span className="truncate">{item.label}</span>}
+      </a>
+    </Button>
+  )
+  if (!collapsed) return link
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{link}</TooltipTrigger>
+      <TooltipContent side="right">{item.label}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+function NavGroups({
   items,
+  collapsed = false,
   onNavigate,
 }: {
   items: NavItem[]
+  collapsed?: boolean
   onNavigate?: () => void
 }) {
+  const groups = React.useMemo(() => groupNav(items), [items])
+  const [openIds, setOpenIds] = React.useState<string[]>(() => {
+    const active = groups.find((group) => group.items.some((item) => isNavItemActive(item.href)))
+    return [active?.id ?? groups[0]?.id].filter(Boolean) as string[]
+  })
+
+  const toggle = (id: string) => {
+    setOpenIds((current) =>
+      current.includes(id) ? current.filter((value) => value !== id) : [...current, id]
+    )
+  }
+
   return (
     <nav className="grid gap-1" aria-label="主导航">
-      {items.map(({ label, href, icon: Icon, section, external }) => {
-        const active = isNavItemActive(href)
+      {groups.map((group) => {
+        const GroupIcon = group.icon
+        const single = group.items.length === 1
+        const open = openIds.includes(group.id)
+        const groupActive = group.items.some((item) => isNavItemActive(item.href))
+
+        if (single) {
+          return (
+            <NavLeaf
+              key={group.id}
+              item={{ ...group.items[0], icon: GroupIcon }}
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+            />
+          )
+        }
+
+        if (collapsed) {
+          return (
+            <Popover key={group.id}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={groupActive ? "secondary" : "ghost"}
+                      className="size-9 justify-center rounded-lg px-0"
+                      aria-label={group.label}
+                    >
+                      <GroupIcon className="size-4 text-muted-foreground" />
+                    </Button>
+                  </PopoverTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="right">{group.label}</TooltipContent>
+              </Tooltip>
+              <PopoverContent side="right" align="start" className="w-52 p-2">
+                <p className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                  {group.label}
+                </p>
+                {group.items.map((item) => (
+                  <NavLeaf key={item.href} item={item} onNavigate={onNavigate} />
+                ))}
+              </PopoverContent>
+            </Popover>
+          )
+        }
+
         return (
-          <React.Fragment key={href}>
-            {section && (
-              <p className="px-3 pt-4 pb-1 text-[11px] font-medium tracking-wider text-muted-foreground first:pt-0">
-                {section}
-              </p>
-            )}
+          <div key={group.id} className="grid gap-0.5">
             <Button
-              asChild
-              variant={active ? "secondary" : "ghost"}
-              className={cn(
-                "h-10 justify-start gap-3 rounded-xl px-3 font-normal",
-                active && "font-medium"
-              )}
+              type="button"
+              variant={groupActive ? "secondary" : "ghost"}
+              className="h-9 w-full justify-start gap-2.5 rounded-lg px-2.5 font-medium"
+              onClick={() => toggle(group.id)}
+              aria-expanded={open}
             >
-              <a
-                href={href}
-                onClick={onNavigate}
-                aria-current={active ? "page" : undefined}
-                target={external ? "_blank" : undefined}
-                rel={external ? "noopener noreferrer" : undefined}
-              >
-                <Icon
-                  className="size-4 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <span>{label}</span>
-                {active && (
-                  <ChevronRight
-                    className="ml-auto size-4 text-muted-foreground"
-                    aria-hidden="true"
-                  />
+              <GroupIcon className="size-4 shrink-0 text-muted-foreground" />
+              <span className="truncate">{group.label}</span>
+              <ChevronDown
+                className={cn(
+                  "ml-auto size-4 text-muted-foreground transition-transform",
+                  open && "rotate-180"
                 )}
-              </a>
+              />
             </Button>
-          </React.Fragment>
+            {open && (
+              <div className="ml-3 grid gap-0.5 border-l pl-2">
+                {group.items.map((item) => (
+                  <NavLeaf key={item.href} item={item} onNavigate={onNavigate} />
+                ))}
+              </div>
+            )}
+          </div>
         )
       })}
     </nav>
+  )
+}
+
+/** Preserve the independent navigation scroll position across PHP page loads. */
+function PersistentNavScrollArea({
+  storageKey,
+  className,
+  children,
+}: {
+  storageKey: string
+  className?: string
+  children: React.ReactNode
+}) {
+  const rootRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const viewport = rootRef.current?.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    )
+    if (!viewport) return
+
+    const save = () => {
+      try {
+        sessionStorage.setItem(storageKey, String(viewport.scrollTop))
+      } catch {
+        // Storage can be unavailable in privacy-restricted browser contexts.
+      }
+    }
+
+    let saved = 0
+    try {
+      saved = Number(sessionStorage.getItem(storageKey) || 0)
+    } catch {
+      saved = 0
+    }
+    if (saved > 0) {
+      requestAnimationFrame(() => {
+        viewport.scrollTop = saved
+      })
+    }
+
+    viewport.addEventListener("scroll", save, { passive: true })
+    window.addEventListener("pagehide", save)
+    return () => {
+      save()
+      viewport.removeEventListener("scroll", save)
+      window.removeEventListener("pagehide", save)
+    }
+  }, [storageKey])
+
+  return (
+    <div ref={rootRef} className={cn("min-h-0", className)}>
+      <ScrollArea className="h-full overscroll-contain">{children}</ScrollArea>
+    </div>
   )
 }
 
@@ -553,156 +735,180 @@ function WorkspaceShell({
   const { resolvedTheme, setTheme } = useTheme()
   const dark = resolvedTheme === "dark"
   const [mobileOpen, setMobileOpen] = React.useState(false)
+  const [collapsed, setCollapsed] = React.useState(() => {
+    try {
+      return localStorage.getItem("epay-sidebar-collapsed") === "1"
+    } catch {
+      return false
+    }
+  })
   const nav =
     kind === "admin"
       ? getVisibleNav(adminNav, features ?? {})
       : getMerchantNav(features ?? {})
+  const subtitle = kind === "admin" ? "平台运营" : "商户自收款"
+  const toggleCollapsed = () => {
+    setCollapsed((current) => {
+      const next = !current
+      try {
+        localStorage.setItem("epay-sidebar-collapsed", next ? "1" : "0")
+      } catch {
+        // 隐私模式下忽略持久化。
+      }
+      return next
+    })
+  }
+
+  const accountMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-10 gap-2 rounded-xl px-2">
+          <Avatar className="size-7">
+            <AvatarFallback>{kind === "admin" ? "AD" : "商户"}</AvatarFallback>
+          </Avatar>
+          <span className="hidden text-sm sm:inline">
+            {kind === "admin" ? "管理员" : "商户账户"}
+          </span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuGroup>
+          <DropdownMenuItem asChild>
+            <a href={kind === "admin" ? "./set.php?mod=account" : "editinfo.php"}>
+              <Settings data-icon="inline-start" />
+              账户设置
+            </a>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <a href="/doc.html" target="_blank" rel="noreferrer">
+              <FileText data-icon="inline-start" />
+              开发文档
+            </a>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuItem asChild>
+            <a href={kind === "admin" ? "./login.php?logout" : "login.php?logout"}>
+              <LogOut data-icon="inline-start" />
+              退出登录
+            </a>
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+
   return (
-    <div className="min-h-svh bg-muted/30 text-foreground antialiased">
-      <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-[1440px] items-center gap-3 px-4 sm:px-6 lg:px-8">
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden"
-                aria-label="打开导航"
-              >
-                <Menu className="size-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-[280px] p-0">
-              <SheetHeader className="border-b px-5 py-4 text-left">
-                <SheetTitle>
-                  <Brand name={sitename} />
-                </SheetTitle>
-                <SheetDescription>快速访问常用功能</SheetDescription>
-              </SheetHeader>
-              <ScrollArea className="h-[calc(100vh-118px)] px-4 py-5">
-                <NavLinks items={nav} onNavigate={() => setMobileOpen(false)} />
-              </ScrollArea>
-            </SheetContent>
-          </Sheet>
-          <div className="hidden md:block">
-            <Brand name={sitename} />
+    <TooltipProvider>
+      <div className="flex min-h-svh bg-muted/30 text-foreground antialiased">
+        <aside
+          className={cn(
+            "sticky top-0 hidden h-svh shrink-0 flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 md:flex",
+            collapsed ? "w-[72px]" : "w-[240px]"
+          )}
+        >
+          <div
+            className={cn(
+              "flex h-16 items-center border-b",
+              collapsed ? "justify-center px-2" : "px-4"
+            )}
+          >
+            <Brand compact={collapsed} name={sitename} subtitle={subtitle} />
           </div>
-          <Separator
-            orientation="vertical"
-            className="mx-2 hidden h-6 md:block"
-          />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{title}</p>
-            <p className="hidden truncate text-xs text-muted-foreground sm:block">
-              {description}
-            </p>
-          </div>
-          <div className="ml-auto flex items-center gap-1.5">
+          <PersistentNavScrollArea
+            storageKey={`epay-nav-${kind}-desktop`}
+            className={cn("min-h-0 flex-1", collapsed ? "px-2 py-3" : "px-3 py-3")}
+          >
+            <NavGroups items={nav} collapsed={collapsed} />
+          </PersistentNavScrollArea>
+          <div className={cn("border-t p-2", collapsed ? "px-2" : "px-3")}>
             <Button
+              type="button"
               variant="ghost"
-              size="icon"
-              className="rounded-xl"
-              onClick={() => setTheme(dark ? "light" : "dark")}
-              aria-label={dark ? "切换亮色模式" : "切换暗色模式"}
+              className={cn(
+                "h-9 rounded-lg",
+                collapsed ? "w-full justify-center px-0" : "w-full justify-start gap-2"
+              )}
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? "展开侧边栏" : "收起侧边栏"}
             >
-              {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+              {collapsed ? (
+                <PanelLeftOpen className="size-4" />
+              ) : (
+                <>
+                  <PanelLeftClose className="size-4" />
+                  <span>收起菜单</span>
+                </>
+              )}
             </Button>
-            <Button
-              asChild
-              variant="ghost"
-              size="icon"
-              className="hidden rounded-xl sm:inline-flex"
-            >
-              <a href="/doc.html" aria-label="打开开发文档">
-                <LifeBuoy className="size-4" />
-              </a>
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-10 gap-2 rounded-xl px-2">
-                  <Avatar className="size-7">
-                    <AvatarFallback>
-                      {kind === "admin" ? "AD" : "商户"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden text-sm sm:inline">
-                    {kind === "admin" ? "管理员" : "商户账户"}
-                  </span>
-                  <span className="text-muted-foreground">···</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuGroup>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href={
-                        kind === "admin"
-                          ? "./set.php?mod=account"
-                          : "editinfo.php"
-                      }
-                    >
-                      <Settings data-icon="inline-start" />
-                      账户设置
-                    </a>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <a href="/doc.html" target="_blank" rel="noreferrer">
-                      <FileText data-icon="inline-start" />
-                      开发文档
-                    </a>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  <DropdownMenuItem asChild>
-                    <a
-                      href={
-                        kind === "admin"
-                          ? "./login.php?logout"
-                          : "login.php?logout"
-                      }
-                    >
-                      <LogOut data-icon="inline-start" />
-                      退出登录
-                    </a>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </header>
-      <div className="mx-auto flex max-w-[1440px]">
-        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 flex-col border-r bg-background/60 p-4 md:flex">
-          <div className="mb-6 rounded-2xl border bg-card p-4 shadow-sm">
-            <p className="text-xs font-medium tracking-wide text-muted-foreground">
-              当前工作区
-            </p>
-            <p className="mt-1 font-semibold">
-              {kind === "admin" ? "平台运营" : "商户管理"}
-            </p>
-            <Badge
-              variant="secondary"
-              className="mt-3 gap-1.5 rounded-lg font-normal"
-            >
-              <span className="size-1.5 rounded-full bg-primary" />
-              运行正常
-            </Badge>
-          </div>
-          <ScrollArea className="min-h-0 flex-1 pr-2">
-            <NavLinks items={nav} />
-          </ScrollArea>
-          <div className="mt-auto pt-8">
-            <Separator className="mb-4" />
-            <div className="flex items-center gap-2 px-2 text-xs text-muted-foreground">
-              <PanelLeft className="size-3.5" />
-              快捷导航已启用
-            </div>
           </div>
         </aside>
-        <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur-xl">
+            <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
+              <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+                <SheetTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="md:hidden"
+                    aria-label="打开导航"
+                  >
+                    <Menu className="size-5" />
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="left" className="w-[280px] p-0">
+                  <SheetHeader className="border-b px-5 py-4 text-left">
+                    <SheetTitle>
+                      <Brand name={sitename} subtitle={subtitle} />
+                    </SheetTitle>
+                    <SheetDescription>
+                      {kind === "admin" ? "平台运营" : "商户自收款与监听套餐"}
+                    </SheetDescription>
+                  </SheetHeader>
+                  <PersistentNavScrollArea
+                    storageKey={`epay-nav-${kind}-mobile`}
+                    className="h-[calc(100vh-118px)] px-3 py-4"
+                  >
+                    <NavGroups items={nav} onNavigate={() => setMobileOpen(false)} />
+                  </PersistentNavScrollArea>
+                </SheetContent>
+              </Sheet>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium">{title}</p>
+                <p className="hidden truncate text-xs text-muted-foreground sm:block">
+                  {description}
+                </p>
+              </div>
+              <div className="ml-auto flex items-center gap-1.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-xl"
+                  onClick={() => setTheme(dark ? "light" : "dark")}
+                  aria-label={dark ? "切换亮色模式" : "切换暗色模式"}
+                >
+                  {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="icon"
+                  className="hidden rounded-xl sm:inline-flex"
+                >
+                  <a href="/doc.html" aria-label="打开开发文档">
+                    <LifeBuoy className="size-4" />
+                  </a>
+                </Button>
+                {accountMenu}
+              </div>
+            </div>
+          </header>
+          <main className="min-w-0 flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   )
 }
 
@@ -1163,14 +1369,14 @@ function AdminDashboard({ config }: { config?: JsonObject }) {
     <WorkspaceShell
       kind="admin"
       title="平台运营"
-      description="统一管理订单、商户、支付通道与结算"
+      description="管理商户自收款、回调监听套餐与支付通道"
       sitename={sitename}
       features={features}
     >
       <PageHeading
         eyebrow="平台首页"
         title="运营总览"
-        description="实时掌握支付业务的核心指标与近期趋势。"
+        description="平台提供回调与监听服务，商户使用自己的收款码收款。"
         brandName={sitename}
         action={
           <Button onClick={load} variant="outline" className="rounded-xl">
@@ -1422,23 +1628,37 @@ function MerchantDashboard({ config }: { config?: JsonObject }) {
     <WorkspaceShell
       kind="merchant"
       title="商户工作台"
-      description="收款、结算与接口配置一站式管理"
+      description="用自己的收款码收款，平台负责回调与到账监听"
       sitename={sitename}
       features={features}
     >
       <PageHeading
         eyebrow="用户中心"
         title="欢迎回来"
-        description="这是你的商户经营概览，重要状态会在这里第一时间提醒。"
+        description="钱直接进入你的微信 / 支付宝。购买监听套餐后，到账通知会自动回调订单。"
         brandName={sitename}
         action={
           <div className="flex gap-2">
+            <Button asChild variant="outline" className="rounded-xl">
+              <a href="channel.php">
+                <QrCode data-icon="inline-start" />
+                通道管理
+              </a>
+            </Button>
             <Button asChild variant="outline" className="rounded-xl">
               <a href="userinfo.php?mod=api">
                 <ShieldCheck data-icon="inline-start" />
                 API 信息
               </a>
             </Button>
+            {featureEnabled(features, "groupbuy") && (
+              <Button asChild variant="outline" className="rounded-xl">
+                <a href="groupbuy.php">
+                  <PackageCheck data-icon="inline-start" />
+                  监听套餐
+                </a>
+              </Button>
+            )}
             <Button asChild className="rounded-xl">
               <a href="order.php">查看订单</a>
             </Button>
@@ -1455,7 +1675,7 @@ function MerchantDashboard({ config }: { config?: JsonObject }) {
             <StatCard
               label="账户余额"
               value={`¥ ${valueOf(data, "money", "0.00")}`}
-              hint="可用于平台代收"
+              hint="商户账户余额"
               icon={CircleDollarSign}
               tone="blue"
               loading={loading}
@@ -1779,7 +1999,7 @@ function CashierView({ config }: { config?: CashierConfig }) {
             <div className="mt-5 flex flex-col items-stretch gap-3 rounded-2xl border bg-background p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
               <p className="flex items-center gap-2 text-xs text-muted-foreground">
                 <ShieldCheck className="size-4 text-primary" />
-                支付前请确认订单信息
+                请按提示金额原样支付，避免无法到账
               </p>
               <div className="flex items-center gap-4">
                 <span className="text-sm text-muted-foreground">
@@ -1874,6 +2094,8 @@ export function EpayApp({ view, config }: EpayAppProps) {
     return <DocumentationShell config={config as JsonObject | undefined} />
   if (view === "pay-page")
     return <PayPageView config={config as PayPageConfig | undefined} />
+  if (view === "qr-checkout")
+    return <QrCheckoutView config={config as QrCheckoutConfig | undefined} />
   if (view === "merchant-dashboard")
     return <MerchantDashboard config={config as JsonObject | undefined} />
   if (view === "admin-order")
@@ -1996,6 +2218,18 @@ export function EpayApp({ view, config }: EpayAppProps) {
         <AdminChannelConfigView config={config as AdminChannelConfig | undefined} />
       </WorkspaceShell>
     )
+  if (view === "admin-channel-editor")
+    return (
+      <WorkspaceShell
+        kind="admin"
+        title={shellTitle || "支付通道"}
+        description="选择支付方式、插件并完成通道配置"
+        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        features={objectOf(shellConfig, "features")}
+      >
+        <AdminChannelEditorView config={config as AdminChannelEditorConfig | undefined} />
+      </WorkspaceShell>
+    )
   if (view === "admin-channel-test")
     return (
       <WorkspaceShell
@@ -2049,7 +2283,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
       <WorkspaceShell
         kind="merchant"
         title={shellTitle || "商户工作台"}
-        description="收款、结算与接口配置一站式管理"
+        description="商户自收款、回调监听与套餐管理"
         sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
         features={objectOf(shellConfig, "features")}
       >
@@ -2064,7 +2298,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
       <WorkspaceShell
         kind="admin"
         title={shellTitle || "平台运营"}
-        description="统一管理订单、商户、支付通道与结算"
+        description="管理商户自收款、回调监听与通道配置"
         sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
         features={objectOf(shellConfig, "features")}
       >

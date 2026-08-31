@@ -156,6 +156,7 @@ const RESOURCE_DEFINITIONS: Record<string, ResourceDefinition> = {
       { key: "typeshowname", label: "支付方式" },
       { key: "name", label: "通道名称" },
       { key: "plugin", label: "插件" },
+      { key: "configstatus", label: "配置状态" },
       { key: "rate", label: "费率" },
       { key: "status", label: "状态" },
     ],

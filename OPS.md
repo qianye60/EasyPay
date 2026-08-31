@@ -3,7 +3,23 @@
 本仓库由千夜持有，后续改代码、发镜像、管服务器都在这里做。  
 **不要再拉 `aliveranme/Epay` 或 `maajiko/Epay`。** 生产镜像必须是 `ghcr.io/qianye60/easypay`。
 
-公开文档不写明文密码。现网口令在服务器文件里，SSH 上去读。
+公开文档不写明文密码。现网口令只写在本机 `.local-ops.md`（gitignore）和服务器 `/root/pay-secrets/`、`/root/EasyPay.adminpass`。后续 Agent 改渠道、给账号、登后台，先读 `.local-ops.md`。
+
+## 0. 产品目标（不要改成别的项目）
+
+用户要的是 **一个多商户易支付站**，形态对齐 [ezfpy](https://www.ezfpy.cn/doc) / Payphp，不是虎皮椒、不是每人自建 V免签、也不是把本仓库换成另一个产品。
+
+目标能力：
+
+- 商户注册、买套餐、对接密钥、`submit.php` V1（pid + MD5）
+- **通道管理**：新增通道；微信用监控端/挂机宝；**支付宝个人版云端扫码登录（免挂机宝）**；QQ 有独立通道
+- 多用户多收款：钱进每个商户自己的微信/支付宝/QQ
+- 软件下载（监控端）
+
+现网 1GB 机器 **暂时只用挂机版**（`plugins/guajibao` + 安卓监控 APP），因为彩虹没有支付宝云端协议，这台机也跑不下 YPay 云端。  
+**挂机是权宜，不是改需求。** 以后机器变大，在本项目上补云端/换带云端的主站，不要推翻这个产品方向，不要拆现有挂机通道。
+
+禁止：再改成虎皮椒/掌易收必填、让商户自己部署上游、静默换成另一个 GitHub 项目。
 
 ---
 
@@ -152,20 +168,17 @@ docker compose -f /root/EasyPay/docker-compose.prod.yml -f /root/EasyPay/docker-
 
 ---
 
-## 6. 支付渠道（二改方向）
+## 6. 支付渠道
 
-用户收款方式是个人免签约，不要配官方 `alipay` / `wxpay` / `wxpayn` 企业商户插件。
+**目标**见第 0 节（通道管理 + 支付宝云端免挂）。下面只写 **现网挂机权宜**。
 
-| 用途 | 插件目录 | 后台显示名 |
-|---|---|---|
-| 微信 / QQ 手机监听回调 | `plugins/vmq` | V免签 |
-| 支付宝若代理是易支付协议 | `plugins/epayn` | 彩虹易支付V2 |
-| 支付宝若也是手机监听 | 同样用 `vmq` | V免签 |
-| USDT | `plugins/bepusdt` | BEpusdt（需另部署 BEpusdt） |
+商户：`/user/channel.php`（或 `/user/guaji.php`）上传自己的收款码。监控 APP 用「扫码配置」扫页面二维码，或手动贴 `主机/软件通讯密钥`（官方 V免签只认这一段，心跳打 `/appHeart`）。网站对接仍是 `/doc_old.html` 的 `submit.php`。
 
-后台路径：支付管理 → 支付插件 → 支付通道 → 支付方式。
+插件 `plugins/guajibao`：微信 / 支付宝 / QQ 个人码 + 通知栏回调。官方 V免签 APK 只稳微信和支付宝；QQ 要能推 QQ 通知的挂机宝。
 
-本仓库没有「支付宝扫码登录 Cookie 监控」专用插件。
+USDT：本机 BEpusdt `:8080`。
+
+已开放注册、购买会员（默认「商户套餐」30 元 / 30 天，收款 uid 1000）。`vmq` 容器保持关闭。
 
 ---
 
@@ -184,4 +197,6 @@ docker compose -f /root/EasyPay/docker-compose.prod.yml -f /root/EasyPay/docker-
 - 用户说「更新 / 发版 / 部署」：走第 4 节发版流程  
 - 用户说「改 EasyPay / 易支付」：改本机 `Epay` 目录，不要改服务器上手工补丁（下次 pull 会被覆盖）  
 - 用户说「服务器」默认这台大阪机 `20.78.176.93`  
+- **不要改产品方向**：要的是带通道管理/支付宝云端的多商户易支付；挂机只是小机器过渡  
 - 回复用中文  
+- 明文账密、通讯密钥、API Token：只改 `.local-ops.md` 和服务器 `/root/pay-secrets/`  

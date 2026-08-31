@@ -11,6 +11,27 @@ $groupconfig = getGroupConfig($userrow['gid']);
 $conf = array_merge($conf, $groupconfig);
 
 switch($act){
+case 'guajiUpload':
+	if(!isset($_POST['csrf_token']) || $_POST['csrf_token']!==$_SESSION['csrf_token'])exit('{"code":-1,"msg":"CSRF TOKEN ERROR"}');
+	require_once PLUGIN_ROOT.'guajibao/inc/helper.php';
+	$field = trim($_POST['field'] ?? '');
+	if(!in_array($field, ['wx_qr','ali_qr','qq_qr'], true)) exit('{"code":-1,"msg":"类型错误"}');
+	if(empty($_FILES['file']) || !is_uploaded_file($_FILES['file']['tmp_name'])) exit('{"code":-1,"msg":"请选择图片"}');
+	if($_FILES['file']['size'] > 2*1024*1024) exit('{"code":-1,"msg":"图片不能超过2MB"}');
+	$info = @getimagesize($_FILES['file']['tmp_name']);
+	if(!$info || empty($info['mime'])) exit('{"code":-1,"msg":"不是有效图片"}');
+	$mimeMap = ['image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp'];
+	if(!isset($mimeMap[$info['mime']])) exit('{"code":-1,"msg":"仅支持 jpg/png/gif/webp"}');
+	$dirRel = 'assets/uploads/guaji';
+	$dir = ROOT.$dirRel;
+	if(!is_dir($dir) && !mkdir($dir, 0755, true)) exit('{"code":-1,"msg":"无法创建上传目录"}');
+	$name = $uid.'_'.$field.'.'.$mimeMap[$info['mime']];
+	$dest = $dir.'/'.$name;
+	if(!move_uploaded_file($_FILES['file']['tmp_name'], $dest)) exit('{"code":-1,"msg":"保存失败"}');
+	$rel = $dirRel.'/'.$name;
+	if(!GuajiHelper::saveQr($uid, $field, $rel)) exit('{"code":-1,"msg":"写入失败"}');
+	exit(json_encode(['code'=>0,'msg'=>'上传成功','url'=>'/'.$rel], JSON_UNESCAPED_UNICODE));
+break;
 case 'info':
 	if($userrow['open_wxa'] == 0) exit('{"code":-1,"msg":"商户未开启微信小程序功能"}');
 	$name = !empty($userrow['certname']) ? $userrow['certname'] : $userrow['username'];
