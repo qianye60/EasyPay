@@ -2431,7 +2431,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
       <WorkspaceShell
         kind="merchant"
         title="套餐购买"
-        description="选择适合你的回调监听服务套餐"
+        description="选择适合你的套餐服务"
         sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
         features={objectOf(shellConfig, "features")}
         user={objectOf(shellConfig, "user")}

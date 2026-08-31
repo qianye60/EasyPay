@@ -902,7 +902,7 @@ case 'groupbuy':
 	}
 	if($typeid==0){
 		if($money>$userrow['money'])exit('{"code":-1,"msg":"余额不足，请选择其他方式支付"}');
-		changeUserMoney($uid, $money, false, '购买会员');
+		changeUserMoney($uid, $money, false, '套餐购买');
 		changeUserGroup($uid, $gid, $endtime);
 
 		if($userrow['upid'] > 0){
@@ -912,16 +912,16 @@ case 'groupbuy':
 			if($conf_n['invite_open'] == 1 && $conf_n['invite_groupbuy_rate'] > 0){
 				$invite_money = round($money * $conf_n['invite_groupbuy_rate'] / 100, 2);
 				if($invite_money > 0){
-					changeUserMoney($userrow['upid'], $invite_money, true, '邀请购买会员');
+					changeUserMoney($userrow['upid'], $invite_money, true, '邀请套餐购买');
 				}
 			}
 		}
 
 		unset($_SESSION['csrf_token']);
-		$result = ['code'=>1, 'msg'=>'购买会员成功！'];
+		$result = ['code'=>1, 'msg'=>'套餐购买成功！'];
 		exit(json_encode($result));
 	}else{
-		$name = '购买会员-'.$row['name'];
+		$name = '套餐购买-'.$row['name'];
 		$trade_no=date("YmdHis").rand(11111,99999);
 		$return_url=$siteurl.'user/groupbuy.php?ok=1&trade_no='.$trade_no;
 		$domain=getdomain($return_url);

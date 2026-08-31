@@ -273,7 +273,7 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
                 <div className="flex items-center gap-3 rounded-2xl bg-muted/50 p-4">
                   <ShieldCheck className="size-5 text-primary" />
                   <p className="text-sm text-muted-foreground">
-                    安全风控、到账回调与监听套餐统一管理
+                    安全风控、到账回调与套餐服务统一管理
                   </p>
                 </div>
               </CardContent>
@@ -306,7 +306,7 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
             <FeatureCard
               icon={Zap}
               index="02"
-              title="回调与监听套餐"
+              title="回调与套餐服务"
               description="平台负责到账监听和订单回调。按套餐开通服务，不经平台钱包。"
             />
             <FeatureCard
