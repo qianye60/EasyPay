@@ -702,7 +702,7 @@ export function AdminResourceView({ config = {} }: { config?: AdminResourceConfi
 
   const title = stringValue(config.title, definition.title)
   const description = stringValue(config.description, definition.description)
-  const sitename = stringValue(config.sitename, "Rainbow Pay")
+  const sitename = stringValue(config.sitename, "EasyPay")
 
   return (
     <div className="min-w-0 w-full">

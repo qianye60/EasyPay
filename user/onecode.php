@@ -8,6 +8,9 @@ $csrf_token = bin2hex(random_bytes(16));
 $_SESSION['csrf_token'] = $csrf_token;
 $merchant = authcode($uid, 'ENCODE', SYS_KEY);
 $code_url = $siteurl.'paypage/?merchant='.urlencode($merchant);
+require_once PLUGIN_ROOT.'guajibao/inc/helper.php';
+$guaji = GuajiHelper::get($uid);
+$alipay_qr_url = !empty($guaji['ali_qr']) ? '/'.ltrim($guaji['ali_qr'], '/').'?v='.time() : '';
 $epay_ui_view = 'merchant-onecode';
 $epay_ui_config = [
 	'sitename' => $conf['sitename'],
@@ -15,6 +18,7 @@ $epay_ui_config = [
 	'description' => '一个码收多种支付方式',
 	'codeUrl' => $code_url,
 	'codeName' => $userrow['codename'] ?: '',
+	'alipayQrUrl' => $alipay_qr_url,
 	'csrfToken' => $csrf_token,
 	'styleUrl' => './assets/js/config.json',
 ];

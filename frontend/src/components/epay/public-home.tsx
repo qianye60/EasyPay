@@ -2,7 +2,6 @@ import {
   ArrowRight,
   BarChart3,
   Check,
-  CircleDollarSign,
   Menu,
   ShieldCheck,
   WalletCards,
@@ -10,6 +9,7 @@ import {
 } from "lucide-react"
 import type { ElementType } from "react"
 
+import { SiteLogo } from "@/components/epay/site-logo"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -38,16 +38,14 @@ function textOf(config: JsonObject, key: string, fallback: string) {
     : String(value)
 }
 
-function Brand({ name }: { name: string }) {
+function Brand({ name, logoUrl }: { name: string; logoUrl?: string }) {
   return (
     <a
       href="/"
       className="flex min-w-0 items-center gap-3"
       aria-label={`${name} 首页`}
     >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-        <CircleDollarSign className="size-5" />
-      </span>
+      <SiteLogo logoUrl={logoUrl} className="size-10" />
       <span className="min-w-0 leading-tight">
         <span className="block truncate font-semibold tracking-tight">
           {name}
@@ -67,7 +65,8 @@ const navItems = [
 ] as const
 
 export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
-  const siteName = textOf(config, "sitename", "Rainbow Pay")
+  const siteName = textOf(config, "sitename", "EasyPay")
+  const logoUrl = textOf(config, "logoUrl", "")
   const title = textOf(config, "title", `欢迎使用${siteName}`)
   const description = textOf(
     config,
@@ -97,7 +96,7 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
               <SheetContent side="left">
                 <SheetHeader className="text-left">
                   <SheetTitle>
-                    <Brand name={siteName} />
+                    <Brand name={siteName} logoUrl={logoUrl} />
                   </SheetTitle>
                   <SheetDescription>快速访问平台入口</SheetDescription>
                 </SheetHeader>
@@ -125,7 +124,7 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
               </SheetContent>
             </Sheet>
           </div>
-          <Brand name={siteName} />
+          <Brand name={siteName} logoUrl={logoUrl} />
           <nav className="ml-auto hidden items-center gap-1 md:flex">
             {navItems.map(([label, href]) => (
               <Button
@@ -344,7 +343,7 @@ export function PublicHomeView({ config = {} }: { config?: JsonObject }) {
       <footer className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
         <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <Brand name={siteName} />
+            <Brand name={siteName} logoUrl={logoUrl} />
             <p className="mt-4 max-w-xs text-sm leading-6 text-muted-foreground">
               让支付接入更简单，让每一笔收款都清晰可控。商户自己收款，平台只做回调与监听。
             </p>

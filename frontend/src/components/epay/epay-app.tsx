@@ -31,6 +31,7 @@ import {
   WalletCards,
 } from "lucide-react"
 
+import { SiteLogo } from "@/components/epay/site-logo"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AuthView } from "@/components/epay/auth-view"
 import { AdminOrderView, type AdminOrderConfig } from "@/components/epay/admin-order"
@@ -175,6 +176,7 @@ type JsonObject = Record<string, unknown>
 type CashierConfig = {
   tradeNo?: string
   sitename?: string
+  logoUrl?: string
   other?: boolean
   order?: {
     name?: string
@@ -504,14 +506,16 @@ function groupNav(items: NavItem[]): NavGroup[] {
 
 function Brand({
   compact = false,
-  name = "Rainbow Pay",
+  name = "EasyPay",
   subtitle = "商户自收款",
   role,
+  logoUrl,
 }: {
   compact?: boolean
   name?: string
   subtitle?: string
   role?: string
+  logoUrl?: string
 }) {
   return (
     <div
@@ -520,9 +524,7 @@ function Brand({
         compact ? "justify-center" : "gap-2.5"
       )}
     >
-      <div className="relative flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-primary via-primary/90 to-primary/75 text-primary-foreground shadow-xs shadow-primary/20 ring-1 ring-white/20">
-        <CircleDollarSign className="size-4" aria-hidden="true" />
-      </div>
+      <SiteLogo logoUrl={logoUrl} className="size-8 rounded-lg" />
       {!compact && (
         <div className="min-w-0 leading-none">
           <div className="flex items-center gap-1.5">
@@ -764,7 +766,8 @@ function WorkspaceShell({
   kind,
   title,
   description,
-  sitename = "Rainbow Pay",
+  sitename = "EasyPay",
+  logoUrl,
   features,
   user,
 }: {
@@ -773,6 +776,7 @@ function WorkspaceShell({
   title: string
   description?: string
   sitename?: string
+  logoUrl?: string
   features?: JsonObject
   user?: JsonObject
 }) {
@@ -938,7 +942,7 @@ function WorkspaceShell({
                   <SheetContent side="left" className="w-[280px] p-0">
                     <SheetHeader className="border-b px-5 py-4 text-left">
                       <SheetTitle>
-                        <Brand name={sitename} subtitle={subtitle} />
+                        <Brand name={sitename} subtitle={subtitle} logoUrl={logoUrl} />
                       </SheetTitle>
                       <SheetDescription>
                         {description || (kind === "admin" ? "平台运营" : "商户自收款与套餐管理")}
@@ -1007,7 +1011,7 @@ function PageHeading({
   title,
   description,
   action,
-  brandName = "Rainbow Pay",
+  brandName = "EasyPay",
 }: {
   eyebrow?: string
   title: string
@@ -1279,7 +1283,8 @@ function DocumentationShell({ config }: { config?: JsonObject }) {
   const [mobileOpen, setMobileOpen] = React.useState(false)
   const active = String(config?.doc ?? "index")
   const title = String(config?.title ?? "开发文档")
-  const sitename = String(config?.sitename ?? "Rainbow Pay")
+  const sitename = String(config?.sitename ?? "EasyPay")
+  const logoUrl = String(config?.logoUrl ?? "")
   const dark = resolvedTheme === "dark"
 
   return (
@@ -1300,7 +1305,7 @@ function DocumentationShell({ config }: { config?: JsonObject }) {
             <SheetContent side="left" className="w-[290px] p-0">
               <SheetHeader className="border-b px-5 py-4 text-left">
                 <SheetTitle>
-                  <Brand name={sitename} />
+                  <Brand name={sitename} logoUrl={logoUrl} />
                 </SheetTitle>
                 <SheetDescription>快速浏览接口文档</SheetDescription>
               </SheetHeader>
@@ -1313,7 +1318,7 @@ function DocumentationShell({ config }: { config?: JsonObject }) {
             </SheetContent>
           </Sheet>
           <div className="hidden md:block">
-            <Brand name={sitename} />
+            <Brand name={sitename} logoUrl={logoUrl} />
           </div>
           <Separator
             orientation="vertical"
@@ -1493,7 +1498,8 @@ function AdminDashboard({ config }: { config?: JsonObject }) {
   const order = objectOf(data, "order")
   const orderToday = objectOf(data, "order_today")
   const rows = Object.entries(order).slice(0, 7)
-  const sitename = String(config?.sitename ?? "Rainbow Pay")
+  const sitename = String(config?.sitename ?? "EasyPay")
+  const logoUrl = String(config?.logoUrl ?? "")
   const features = objectOf(config, "features")
   const user = objectOf(config, "user")
   return (
@@ -1502,6 +1508,7 @@ function AdminDashboard({ config }: { config?: JsonObject }) {
       title="运营总览"
       description="管理商户自收款、套餐服务与支付通道"
       sitename={sitename}
+      logoUrl={logoUrl}
       features={features}
       user={user}
     >
@@ -1920,7 +1927,8 @@ function MerchantDashboard({ config }: { config?: JsonObject }) {
       !showname.includes("qq")
     )
   })
-  const sitename = String(config?.sitename ?? "Rainbow Pay")
+  const sitename = String(config?.sitename ?? "EasyPay")
+  const logoUrl = String(config?.logoUrl ?? "")
   const features = objectOf(config, "features")
   const user = objectOf(config, "user")
   return (
@@ -1929,6 +1937,7 @@ function MerchantDashboard({ config }: { config?: JsonObject }) {
       title="工作台"
       description="用自己的收款码收款，平台负责订单回调"
       sitename={sitename}
+      logoUrl={logoUrl}
       features={features}
       user={user}
     >
@@ -2210,7 +2219,7 @@ function CashierView({ config }: { config?: CashierConfig }) {
       <div className="mx-auto max-w-3xl">
         <header className="mb-8 flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-3">
-            <Brand name={config?.sitename ?? "Rainbow Pay"} />
+            <Brand name={config?.sitename ?? "EasyPay"} logoUrl={String(config?.logoUrl ?? "")} />
             <Separator orientation="vertical" className="h-6" />
             <Badge variant="secondary" className="rounded-lg font-normal">
               安全收银台
@@ -2420,7 +2429,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="merchant"
         title="聚合收款"
         description="统一管理收款二维码与分享链接"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
         user={objectOf(shellConfig, "user")}
       >
@@ -2433,7 +2442,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="merchant"
         title="套餐购买"
         description="选择适合你的套餐服务"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
         user={objectOf(shellConfig, "user")}
       >
@@ -2447,7 +2456,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="merchant"
         title="软件下载"
         description="下载安卓监控端，配置后自动回调到账"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
         user={objectOf(shellConfig, "user")}
       >
@@ -2461,7 +2470,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="merchant"
         title="订单记录"
         description="查询、筛选与核对商户交易订单"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
         user={objectOf(shellConfig, "user")}
       >
@@ -2474,7 +2483,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title="订单管理"
         description="查询、核对并处理平台订单"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminOrderView config={config as AdminOrderConfig | undefined} />
@@ -2486,7 +2495,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "平台管理"}
         description="统一管理平台数据与运营配置"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminResourceView config={config as AdminResourceConfig | undefined} />
@@ -2498,7 +2507,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "平台配置"}
         description="统一维护平台运营配置"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminFormView config={config as AdminFormConfig | undefined} />
@@ -2510,7 +2519,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "数据统计"}
         description="按条件查询平台统计数据"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminStatsView config={config as AdminFormConfig | undefined} />
@@ -2522,7 +2531,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "获取用户标识"}
         description="生成 OAuth 与 OpenID 授权链接"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminTokenView config={config as AdminTokenConfig | undefined} />
@@ -2534,7 +2543,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "系统维护"}
         description="执行缓存和历史数据维护"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminMaintenanceView config={config as AdminMaintenanceConfig | undefined} />
@@ -2546,7 +2555,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "批量结算"}
         description="逐笔处理待结算记录"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminSettlementBatchView config={config as AdminSettlementBatchConfig | undefined} />
@@ -2558,7 +2567,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "管理员账户设置"}
         description="分别维护后台登录凭据和支付密码"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminAccountView config={config as AdminAccountConfig | undefined} />
@@ -2570,7 +2579,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "用户组购买设置"}
         description="控制用户组购买开关与商品规则"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminGroupPurchaseView config={config as AdminGroupPurchaseConfig | undefined} />
@@ -2582,7 +2591,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "支付通道密钥配置"}
         description="使用支付插件字段维护通道配置"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminChannelConfigView config={config as AdminChannelConfig | undefined} />
@@ -2594,7 +2603,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "支付通道"}
         description="选择支付方式、插件并完成通道配置"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminChannelEditorView config={config as AdminChannelEditorConfig | undefined} />
@@ -2606,7 +2615,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "测试支付"}
         description="创建测试订单并验证支付通道"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminChannelTestView config={config as AdminChannelTestConfig | undefined} />
@@ -2618,7 +2627,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "TOTP 二次验证"}
         description="保护管理员登录凭据"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminTotpView config={config as AdminTotpConfig | undefined} />
@@ -2630,7 +2639,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "批量结算"}
         description="生成、导出并处理结算批次"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminBatchView config={config as AdminBatchConfig | undefined} />
@@ -2642,7 +2651,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "配置轮询通道"}
         description="维护轮询组的通道顺序和权重"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
       >
         <AdminRollConfigView config={config as AdminRollConfig | undefined} />
@@ -2659,14 +2668,14 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="merchant"
         title={pageTitle}
         description={pageDescription}
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
         user={objectOf(shellConfig, "user")}
       >
         <PageHeading
           title={pageTitle}
           description={pageDescription}
-          brandName={String(shellConfig.sitename ?? "Rainbow Pay")}
+          brandName={String(shellConfig.sitename ?? "EasyPay")}
         />
         <LegacyContentSlot className="epay-legacy-workspace-surface" />
       </WorkspaceShell>
@@ -2681,7 +2690,7 @@ export function EpayApp({ view, config }: EpayAppProps) {
         kind="admin"
         title={shellTitle || "平台运营"}
         description="管理商户自收款、回调监听与通道配置"
-        sitename={String(shellConfig.sitename ?? "Rainbow Pay")}
+        sitename={String(shellConfig.sitename ?? "EasyPay")} logoUrl={String(shellConfig.logoUrl ?? "")}
         features={objectOf(shellConfig, "features")}
         user={objectOf(shellConfig, "user")}
       >

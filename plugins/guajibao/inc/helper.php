@@ -26,7 +26,7 @@ class GuajiHelper {
 			`last_push_note` varchar(255) DEFAULT NULL,
 			PRIMARY KEY (`uid`)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-		foreach (['gjb_key varchar(32) DEFAULT NULL','wx_on tinyint(1) NOT NULL DEFAULT 1','ali_on tinyint(1) NOT NULL DEFAULT 1','qq_on tinyint(1) NOT NULL DEFAULT 1','last_push datetime DEFAULT NULL','last_push_note varchar(255) DEFAULT NULL','wx_payload text DEFAULT NULL','ali_payload text DEFAULT NULL','qq_payload text DEFAULT NULL'] as $col){
+		foreach (['gjb_key varchar(32) DEFAULT NULL','wx_on tinyint(1) NOT NULL DEFAULT 1','ali_on tinyint(1) NOT NULL DEFAULT 1','qq_on tinyint(1) NOT NULL DEFAULT 1','last_push datetime DEFAULT NULL','last_push_note varchar(255) DEFAULT NULL','wx_payload text DEFAULT NULL','ali_payload text DEFAULT NULL','qq_payload text DEFAULT NULL','ali_uid varchar(32) DEFAULT NULL'] as $col){
 			try { $DB->exec("ALTER TABLE `pre_guaji` ADD COLUMN ".$col); } catch (Exception $e) {}
 		}
 	}
@@ -235,5 +235,50 @@ class GuajiHelper {
 			':type'=>$typeid,
 			':price'=>$price,
 		]);
+	}
+
+	static public function aliUid($uid){
+		$row = self::get($uid);
+		$aliUid = trim((string)($row['ali_uid'] ?? ''));
+		if(!preg_match('/^2088\d{12,20}$/', $aliUid)) return '';
+		return $aliUid;
+	}
+
+	static public function setAliUid($uid, $aliUid){
+		global $DB;
+		self::get($uid);
+		$aliUid = trim((string)$aliUid);
+		if($aliUid === ''){
+			return $DB->update('guaji', ['ali_uid'=>null], ['uid'=>intval($uid)]) !== false;
+		}
+		if(!preg_match('/^2088\d{12,20}$/', $aliUid)) return false;
+		return $DB->update('guaji', ['ali_uid'=>$aliUid], ['uid'=>intval($uid)]) !== false;
+	}
+
+	/** 生成支付宝固定金额转账协议链接；未配置 UID 时返回 null */
+	static public function alipayTransferUrl($uid, $amount, $remark=''){
+		$aliUid = self::aliUid($uid);
+		if($aliUid === '') return null;
+		$amount = sprintf('%.2f', round(floatval($amount), 2));
+		if($amount <= 0) return null;
+		$remark = trim(preg_replace('/[\r\n\t]+/', ' ', (string)$remark));
+		if(function_exists('mb_substr')) $remark = mb_substr($remark, 0, 32);
+		else $remark = substr($remark, 0, 32);
+		$biz = json_encode(['s'=>'money','u'=>$aliUid,'a'=>$amount,'m'=>$remark], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+		return 'alipays://platformapi/startapp?appId=20000123&actionType=scan&biz_data='.$biz;
+	}
+
+	static public function isAmountLockedUrl($url){
+		$url = (string)$url;
+		return strpos($url, 'appId=20000123') !== false && strpos($url, 'actionType=scan') !== false;
+	}
+
+	/** 支付宝收银台码：优先固定金额转账，否则回退个人收款码 */
+	static public function alipayPayUrl($uid, $amount, $remark=''){
+		$locked = self::alipayTransferUrl($uid, $amount, $remark);
+		if($locked) return ['url'=>$locked, 'locked'=>1];
+		$payload = self::payload($uid, 'alipay');
+		if($payload) return ['url'=>$payload, 'locked'=>0];
+		return null;
 	}
 }

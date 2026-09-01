@@ -67,7 +67,7 @@ class Payment {
             'page' => $page,
             'title' => $title,
             'description' => $description,
-            'sitename' => $sitename ?: 'Rainbow Pay',
+            'sitename' => $sitename ?: 'EasyPay',
         ], JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
         $root = '<div id="epay-react-root" data-epay-view="gateway-shell" data-epay-config="'.$payload.'"></div><div id="epay-react-legacy-source">';
         $headAssets = '<link rel="stylesheet" href="/assets/dist/epay-ui.css" type="text/css">';
@@ -145,7 +145,7 @@ class Payment {
         $config = [
             'page' => $page,
             'title' => isset($titleMap[$page]) ? $titleMap[$page] : '扫码支付',
-            'sitename' => $sitename ?: 'Rainbow Pay',
+            'sitename' => $sitename ?: 'EasyPay',
             'codeUrl' => $payload,
             'amount' => $order['realmoney'] ?? $order['money'] ?? '0.00',
             'tradeNo' => $order['trade_no'] ?? (defined('TRADE_NO') ? TRADE_NO : ''),
@@ -154,7 +154,12 @@ class Payment {
             'createdAt' => $order['addtime'] ?? '',
             'expireAt' => $addts + $expireSeconds,
             'payType' => isset($payTypeMap[$page]) ? $payTypeMap[$page] : 'wxpay',
+            'amountLocked' => (strpos($payload, 'appId=20000123') !== false && strpos($payload, 'actionType=scan') !== false) ? 1 : 0,
+            'logoUrl' => function_exists('site_logo_url') ? site_logo_url() : '',
         ];
+        if(!empty($config['amountLocked']) && ($config['payType'] ?? '') === 'alipay'){
+            $config['title'] = '支付宝转账';
+        }
         $ver = @filemtime(ROOT.'assets/dist/epay-ui.css') ?: time();
         $json = htmlspecialchars(json_encode($config, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8');
         $title = htmlspecialchars($config['title'].' | '.$config['sitename'], ENT_QUOTES, 'UTF-8');

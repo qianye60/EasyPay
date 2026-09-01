@@ -63,7 +63,7 @@ export function PaymentStatusView({
 }) {
   const success = config.status !== "error"
   const red = config.status === "red-success"
-  const siteName = config.sitename ?? "Rainbow Pay"
+  const siteName = config.sitename ?? "EasyPay"
   const title = success ? (red ? "红包领取成功" : "支付成功") : "操作未完成"
   const description = success
     ? red

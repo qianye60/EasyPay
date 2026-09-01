@@ -127,7 +127,7 @@ function LegacyShellHeader({
 export function LegacyAuthShell({ config }: { config?: LegacyShellConfig }) {
   const kind = String(config?.kind ?? "wx")
   const meta = authMeta[kind] ?? authMeta.wx
-  const sitename = config?.sitename || "Rainbow Pay"
+  const sitename = config?.sitename || "EasyPay"
   const title = config?.title || meta.label
   const description = config?.description || meta.description
 
@@ -161,7 +161,7 @@ export function LegacyAuthShell({ config }: { config?: LegacyShellConfig }) {
 }
 
 export function GatewayShell({ config }: { config?: LegacyShellConfig }) {
-  const sitename = config?.sitename || "Rainbow Pay"
+  const sitename = config?.sitename || "EasyPay"
   const title = config?.title || "支付页面"
   const description =
     config?.description ||
@@ -206,10 +206,10 @@ export function GatewayShell({ config }: { config?: LegacyShellConfig }) {
 }
 
 export function PublicLegacyShell({ config }: { config?: LegacyShellConfig }) {
-  const sitename = config?.sitename || "Rainbow Pay"
+  const sitename = config?.sitename || "EasyPay"
   const title = config?.title || "网站页面"
   const description =
-    config?.description || "欢迎访问 Rainbow Pay，以下内容由站点服务提供。"
+    config?.description || "欢迎访问 EasyPay，以下内容由站点服务提供。"
 
   return (
     <main className="min-h-svh bg-muted/30 px-3 py-4 text-foreground sm:px-6 sm:py-8">

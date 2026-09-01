@@ -148,6 +148,8 @@ if($type){
 $money = isset($_GET['money']) && is_scalar($_GET['money'])?$_GET['money']:null;
 if($money<=0 || !is_numeric($money) || !preg_match('/^[0-9.]+$/', $money))$money = null;
 $codename = !empty($userrow['codename'])?$userrow['codename']:$userrow['username'];
+require_once PLUGIN_ROOT.'guajibao/inc/helper.php';
+$guaji = GuajiHelper::get($uid);
 $csrf_token = bin2hex(random_bytes(16));
 $_SESSION['paypage_token'] = $csrf_token;
 $epay_paypage_config=[
@@ -159,6 +161,8 @@ $epay_paypage_config=[
 	'money'=>$money,
 	'codename'=>$codename,
 	'sitename'=>$conf['sitename'],
+	'hasAlipayQr'=>GuajiHelper::aliUid($uid)!=='' || (!empty($guaji['ali_qr']) && !empty($guaji['ali_payload'])),
+	'logoUrl'=>function_exists('site_logo_url') ? site_logo_url() : '',
 ];
 ?>
 <!DOCTYPE html>

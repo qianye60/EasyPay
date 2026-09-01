@@ -59,7 +59,7 @@ function isOpen(value: unknown) {
 function Brand({
   compact = false,
   inverse = false,
-  name = "Rainbow Pay",
+  name = "EasyPay",
 }: {
   compact?: boolean
   inverse?: boolean
@@ -93,7 +93,7 @@ export function AuthView({ mode, config = {} }: AuthViewProps) {
   const recovery = mode === "user-recovery"
   const keyMode = mode === "user-login" && config.keyMode === true
   const verifyType = String(config.verifytype ?? "0")
-  const siteName = String(config.sitename ?? "Rainbow Pay")
+  const siteName = String(config.sitename ?? "EasyPay")
   const connect = (type: string) => {
     const legacyWindow = window as Window & {
       connect?: (value: string) => void

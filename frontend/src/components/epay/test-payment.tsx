@@ -209,7 +209,7 @@ export function TestPaymentView({
           </CardContent>
           <CardFooter className="justify-between border-t text-xs text-muted-foreground">
             <span>
-              {config.sitename ?? "Rainbow Pay"} · © {new Date().getFullYear()}
+              {config.sitename ?? "EasyPay"} · © {new Date().getFullYear()}
             </span>
             <span>仅用于接口联调</span>
           </CardFooter>

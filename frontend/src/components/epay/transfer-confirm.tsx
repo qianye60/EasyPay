@@ -147,7 +147,7 @@ export function TransferConfirmView({
     ? "确认后，资金将通过微信商家转账到账。"
     : "确认收款后，红包会按当前支付渠道到账。"
   const actionLabel = isWxTransfer ? "确认收款" : "收款"
-  const siteName = config.sitename ?? "Rainbow Pay"
+  const siteName = config.sitename ?? "EasyPay"
 
   return (
     <div className="flex min-h-svh items-center justify-center bg-muted/30 px-4 py-8 text-foreground sm:px-6">

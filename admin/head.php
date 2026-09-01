@@ -11,7 +11,8 @@ $epay_ui_config['user'] = [
 	'role' => 'admin',
 ];
 if(!isset($epay_ui_config['title'])) $epay_ui_config['title'] = isset($title) ? $title : '平台运营';
-if(!isset($epay_ui_config['sitename'])) $epay_ui_config['sitename'] = $conf['sitename'] ?? 'Rainbow Pay';
+if(!isset($epay_ui_config['sitename'])) $epay_ui_config['sitename'] = $conf['sitename'] ?? 'EasyPay';
+if(!isset($epay_ui_config['logoUrl'])) $epay_ui_config['logoUrl'] = function_exists('site_logo_url') ? site_logo_url() : '';
 $epay_ui_config['features'] = array_merge([
 	'domain' => (int)($conf['pay_domain_forbid'] ?? 0) === 1 || (int)($conf['pay_domain_open'] ?? 0) === 1,
 	'invitecode' => (int)($conf['reg_open'] ?? 0) === 2,

@@ -6,7 +6,7 @@ $is_defend = true;
 $allow_search = true;
 include("./includes/common.php");
 
-function render_epay_ui_page($view, $config = [], $title = 'Rainbow Pay'){
+function render_epay_ui_page($view, $config = [], $title = 'EasyPay'){
     $payload = htmlspecialchars(json_encode($config, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
     echo '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>'.h($title).'</title><link rel="stylesheet" href="/assets/dist/epay-ui.css"></head><body><div id="epay-react-root" data-epay-view="'.h($view).'" data-epay-config="'.$payload.'"></div><script type="module" src="/assets/dist/epay-ui.js"></script></body></html>';
     exit;
@@ -136,6 +136,7 @@ if($mod=='index'){
         'email' => $conf['email'],
         'footer' => $conf['footer'],
         'test_open' => (int)$conf['test_open'],
+        'logoUrl' => function_exists('site_logo_url') ? site_logo_url() : '',
     ];
     ?><!DOCTYPE html>
     <html lang="zh-CN">

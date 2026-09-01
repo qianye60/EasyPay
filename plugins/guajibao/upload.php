@@ -45,7 +45,9 @@ if($act === 'testorder'){
 	$money = trim($_POST['money'] ?? '0.01');
 	if(!GuajiHelper::onField($type)) exit('{"code":-1,"msg":"通道不存在"}');
 	if(!GuajiHelper::channelOn($uid, $type)) exit('{"code":-1,"msg":"该通道已关闭"}');
-	if(!GuajiHelper::qrPath($uid, $type)) exit('{"code":-1,"msg":"请先上传该通道的收款码"}');
+	$hasQr = GuajiHelper::qrPath($uid, $type);
+	$hasAliUid = $type === 'alipay' && GuajiHelper::aliUid($uid) !== '';
+	if(!$hasQr && !$hasAliUid) exit('{"code":-1,"msg":"请先配置支付宝 UID 或上传收款码"}');
 	if($money === '' || !is_numeric($money) || $money <= 0 || !preg_match('/^[0-9]+(\.[0-9]{1,2})?$/', $money)) exit('{"code":-1,"msg":"金额不合法，最多两位小数"}');
 	$money = sprintf('%.2f', round((float)$money, 2));
 	if(!empty($conf['pay_maxmoney']) && $money > $conf['pay_maxmoney']) exit('{"code":-1,"msg":"超过最大支付金额"}');
@@ -88,6 +90,12 @@ if($act === 'simulatePush'){
 	if(!is_array($json)) exit(json_encode(['code'=>-1,'msg'=>'模拟推送无响应（请确认已有同金额待支付订单）：'.substr((string)$resp,0,120)], JSON_UNESCAPED_UNICODE));
 	$ok = intval($json['code'] ?? -1) === 1;
 	exit(json_encode(['code'=>$ok?0:-1,'msg'=>$ok?('模拟推送成功：'.$json['msg']):('模拟推送失败：'.($json['msg']??'unknown')),'raw'=>$json], JSON_UNESCAPED_UNICODE));
+}
+if($act === 'saveAliUid'){
+	$aliUid = trim($_POST['ali_uid'] ?? '');
+	if($aliUid !== '' && !preg_match('/^2088\d{12,20}$/', $aliUid)) exit('{"code":-1,"msg":"支付宝 UID 格式不正确，应以 2088 开头"}');
+	if(!GuajiHelper::setAliUid($uid, $aliUid)) exit('{"code":-1,"msg":"保存失败"}');
+	exit(json_encode(['code'=>0,'msg'=>$aliUid===''?'已清空支付宝 UID':'支付宝 UID 已保存，付款将自动锁定金额'], JSON_UNESCAPED_UNICODE));
 }
 
 $field = trim($_POST['field'] ?? '');

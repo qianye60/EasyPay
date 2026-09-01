@@ -64,19 +64,30 @@ foreach($modKeys[$mod] ?? $modKeys['site'] as $key){
 	elseif(strpos($key, 'pwd') !== false || strpos($key, 'key') !== false) $field['type']='password';
 	$fields[] = $field;
 }
-$uploadNotice = isset($_GET['uploaded']) && $_GET['uploaded'] === '1' ? 'LOGO 上传成功。浏览器可能需要强制刷新才能看到新图片。' : '';
+$uploadNotice = isset($_GET['uploaded']) && $_GET['uploaded'] === '1' ? 'LOGO 上传成功。支付页与首页将使用新 Logo（强制刷新缓存后可见）。' : '';
 if($mod === 'upimg'){
+	$currentLogo = function_exists('site_logo_url') ? site_logo_url() : '';
+	$logoFields = [
+		['key'=>'file','label'=>'站点 LOGO','type'=>'file','accept'=>'image/png,image/jpeg,image/gif,image/webp','required'=>true,'description'=>'建议正方形 PNG，透明底更佳。将用于首页与支付收银台。'],
+	];
 	if($_SERVER['REQUEST_METHOD'] === 'POST'){
-		if(!isset($_POST['csrf_token']) || !isset($_SESSION['admin_csrf_token']) || !hash_equals((string)$_SESSION['admin_csrf_token'], (string)$_POST['csrf_token'])) epay_admin_view('admin-form', ['title'=>'LOGO 上传失败','description'=>'CSRF 校验失败，请刷新页面后重试。','notice'=>'CSRF 校验失败。','action'=>['endpoint'=>'./set.php?mod=upimg','method'=>'POST'],'fields'=>[['key'=>'file','label'=>'首页 LOGO','type'=>'file','accept'=>'image/png,image/jpeg,image/gif,image/webp','required'=>true]]]);
+		if(!isset($_POST['csrf_token']) || !isset($_SESSION['admin_csrf_token']) || !hash_equals((string)$_SESSION['admin_csrf_token'], (string)$_POST['csrf_token'])) epay_admin_view('admin-form', ['title'=>'LOGO 上传失败','description'=>'CSRF 校验失败，请刷新页面后重试。','notice'=>'CSRF 校验失败。','action'=>['endpoint'=>'./set.php?mod=upimg','method'=>'POST','submitLabel'=>'确认上传'],'fields'=>$logoFields,'logoUrl'=>$currentLogo]);
 		$tmp = (string)($_FILES['file']['tmp_name'] ?? '');
-		if($tmp === '' || !is_uploaded_file($tmp)) epay_admin_view('admin-form', ['title'=>'LOGO 上传失败','description'=>'没有收到有效的图片文件。','notice'=>'请选择 PNG、JPEG、GIF 或 WebP 图片。','action'=>['endpoint'=>'./set.php?mod=upimg','method'=>'POST'],'fields'=>[['key'=>'file','label'=>'首页 LOGO','type'=>'file','accept'=>'image/png,image/jpeg,image/gif,image/webp','required'=>true]]]);
+		if($tmp === '' || !is_uploaded_file($tmp)) epay_admin_view('admin-form', ['title'=>'LOGO 上传失败','description'=>'没有收到有效的图片文件。','notice'=>'请选择 PNG、JPEG、GIF 或 WebP 图片。','action'=>['endpoint'=>'./set.php?mod=upimg','method'=>'POST','submitLabel'=>'确认上传'],'fields'=>$logoFields,'logoUrl'=>$currentLogo]);
 		$allowedTypes = ['image/png','image/jpeg','image/gif','image/webp'];
 		$finfo = finfo_open(FILEINFO_MIME_TYPE); $mime = $finfo ? finfo_file($finfo, $tmp) : ''; if($finfo) finfo_close($finfo);
-		if(!in_array($mime, $allowedTypes, true)) epay_admin_view('admin-form', ['title'=>'LOGO 上传失败','description'=>'图片类型不受支持。','notice'=>'仅支持 PNG、JPEG、GIF 或 WebP。','action'=>['endpoint'=>'./set.php?mod=upimg','method'=>'POST'],'fields'=>[['key'=>'file','label'=>'首页 LOGO','type'=>'file','accept'=>'image/png,image/jpeg,image/gif,image/webp','required'=>true]]]);
-		if(!move_uploaded_file($tmp, ROOT.'assets/img/logo.png')) epay_admin_view('admin-form', ['title'=>'LOGO 上传失败','description'=>'服务器无法写入 LOGO 文件。','notice'=>'请检查 assets/img 目录写入权限。','action'=>['endpoint'=>'./set.php?mod=upimg','method'=>'POST'],'fields'=>[['key'=>'file','label'=>'首页 LOGO','type'=>'file','accept'=>'image/png,image/jpeg,image/gif,image/webp','required'=>true]]]);
+		if(!in_array($mime, $allowedTypes, true)) epay_admin_view('admin-form', ['title'=>'LOGO 上传失败','description'=>'图片类型不受支持。','notice'=>'仅支持 PNG、JPEG、GIF 或 WebP。','action'=>['endpoint'=>'./set.php?mod=upimg','method'=>'POST','submitLabel'=>'确认上传'],'fields'=>$logoFields,'logoUrl'=>$currentLogo]);
+		$uploadDir = ROOT.'assets/uploads';
+		if(!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true)) epay_admin_view('admin-form', ['title'=>'LOGO 上传失败','description'=>'无法创建 uploads 目录。','notice'=>'请检查 assets/uploads 写入权限。','action'=>['endpoint'=>'./set.php?mod=upimg','method'=>'POST','submitLabel'=>'确认上传'],'fields'=>$logoFields,'logoUrl'=>$currentLogo]);
+		$destUpload = $uploadDir.'/logo.png';
+		$destImg = ROOT.'assets/img/logo.png';
+		if(!move_uploaded_file($tmp, $destUpload)) epay_admin_view('admin-form', ['title'=>'LOGO 上传失败','description'=>'服务器无法写入 LOGO 文件。','notice'=>'请检查 assets/uploads 目录写入权限。','action'=>['endpoint'=>'./set.php?mod=upimg','method'=>'POST','submitLabel'=>'确认上传'],'fields'=>$logoFields,'logoUrl'=>$currentLogo]);
+		@chmod($destUpload, 0644);
+		// 兼容旧模板仍读取 assets/img/logo.png
+		if(is_dir(ROOT.'assets/img')) @copy($destUpload, $destImg);
 		header('Location: ./set.php?mod=upimg&uploaded=1'); exit;
 	}
-	epay_admin_view('admin-form', ['title'=>'首页 LOGO 设置','description'=>'上传后将覆盖 assets/img/logo.png。','notice'=>$uploadNotice,'action'=>['endpoint'=>'./set.php?mod=upimg','method'=>'POST','submitLabel'=>'确认上传'],'fields'=>[['key'=>'file','label'=>'首页 LOGO','type'=>'file','accept'=>'image/png,image/jpeg,image/gif,image/webp','required'=>true]]]);
+	epay_admin_view('admin-form', ['title'=>'站点 LOGO 设置','description'=>'上传后保存到 assets/uploads/logo.png（发版不会覆盖）。支付收银台与首页会显示此 Logo。','notice'=>$uploadNotice,'action'=>['endpoint'=>'./set.php?mod=upimg','method'=>'POST','submitLabel'=>'确认上传'],'fields'=>$logoFields,'logoUrl'=>$currentLogo]);
 }
 $links = [];
 foreach(['site','pay','risk','settle','transfer','oauth','notice','certificate','template','mail','cron','proxy','iptype','upimg','account'] as $key) $links[] = ['label'=>$labels[$key] ?? $key, 'href'=>'./set.php?mod='.$key];

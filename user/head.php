@@ -44,6 +44,7 @@ if($epay_ui_view){
 }
 if($epay_ui_view && !isset($epay_ui_config['title'])) $epay_ui_config['title'] = isset($title) ? $title : '商户管理';
 if($epay_ui_view && !isset($epay_ui_config['sitename'])) $epay_ui_config['sitename'] = $conf['sitename'];
+if($epay_ui_view && !isset($epay_ui_config['logoUrl'])) $epay_ui_config['logoUrl'] = function_exists('site_logo_url') ? site_logo_url() : '';
 $epay_ui_ver = @filemtime(ROOT.'assets/dist/epay-ui.css') ?: time();
 ?>
 <!DOCTYPE html>

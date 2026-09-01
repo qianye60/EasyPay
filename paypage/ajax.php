@@ -10,6 +10,7 @@ $money=is_scalar($_POST['money'] ?? null)?daddslashes($_POST['money']):'';
 $payer=is_scalar($_POST['payer'] ?? null)?daddslashes($_POST['payer']):'';
 $paytype=is_scalar($_POST['paytype'] ?? null)?$_POST['paytype']:'';
 $direct=is_scalar($_POST['direct'] ?? null)?intval($_POST['direct']):0;
+$static_qr=is_scalar($_POST['static_qr'] ?? null)?intval($_POST['static_qr']):0;
 $param=is_scalar($_POST['remark'] ?? null) && $_POST['remark'] !== ''?htmlspecialchars(daddslashes($_POST['remark'])):null;
 if(!is_string($_POST['token'] ?? null) || !is_string($_SESSION['paypage_token'] ?? null) || !hash_equals($_SESSION['paypage_token'], $_POST['token']))showerrorjson('CSRF TOKEN ERROR');
 if(!$uid || $uid!=$_SESSION['paypage_uid'])showerrorjson('收款方信息无效');
@@ -68,6 +69,17 @@ $result['code']=0;
 $result['msg']='succ';
 $result['trade_no']=$trade_no;
 $result['direct']=$direct;
+
+if($static_qr === 1){
+	if($paytype !== 'alipay')showerrorjson('当前只支持支付宝转账二维码');
+	require_once PLUGIN_ROOT.'guajibao/inc/helper.php';
+	$pay = GuajiHelper::alipayPayUrl($uid, $money, $trade_no);
+	$typeid = intval($DB->getColumn("SELECT id FROM pre_type WHERE name=:name LIMIT 1", [':name'=>'alipay']));
+	if(!$typeid || !$pay)showerrorjson('请先配置支付宝 UID（推荐）或上传收款码');
+	if(!$DB->update('order', ['type'=>$typeid, 'realmoney'=>$money, 'getmoney'=>$money], ['trade_no'=>$trade_no]))showerrorjson('更新订单失败，请返回重试');
+	$result['url'] = '/paypage/qr.php?trade_no='.urlencode($trade_no);
+	exit(json_encode($result));
+}
 
 if(!empty($paytype) && isset($_SESSION['paypage_typeid']) && isset($_SESSION['paypage_channel']) && isset($_SESSION['paypage_rate'])){
 	$typeid = intval($_SESSION['paypage_typeid']);

@@ -92,7 +92,8 @@ function submitFun(){
     var uid = $("#uid").val();
     var paytype = $("#paytype").val();
     var token = $("#token").val();
-	var direct = $("#direct").val();
+    var direct = $("#direct").val();
+    var staticQr = $("#static_qr").val();
     var payer = $("#payer").val();
     var remark = document.querySelector("#remark-content").innerText;
 
@@ -101,7 +102,7 @@ function submitFun(){
     new Post({
         url : 'ajax.php',
         dataType : 'json',
-        data : {"money":amount,"payer":payer,"uid":uid,"paytype":paytype,"direct":direct,"remark":remark,"token":token},
+        data : {"money":amount,"payer":payer,"uid":uid,"paytype":paytype,"direct":direct,"static_qr":staticQr,"remark":remark,"token":token},
         error : function(){
             loading.hide();
             submitAble = true;
@@ -230,6 +231,7 @@ var valueCur = '';
 var valueFormat = '';
 var submitAble = true;
 var valueFinal = 0;
+var staticQrAvailable = $("#has_alipay_qr").val() === "1";
 
 if(!reactKeyboard){
     new Hammer(keyboard).on('tap',keypress);
@@ -259,6 +261,6 @@ if(!reactKeyboard) clearBtn.addEventListener('keydown', function(e){
 });
 
 var txAmount = $("#txAmount").val();
-if (!!txAmount && txAmount > 0) {
+if (!!txAmount && txAmount > 0 && !staticQrAvailable) {
     submitFun()
 }

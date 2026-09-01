@@ -1,11 +1,13 @@
 import {
   Delete,
+  ExternalLink,
   LockKeyhole,
   MessageSquarePlus,
   ShieldCheck,
 } from "lucide-react"
 import * as React from "react"
 
+import { SiteLogo } from "@/components/epay/site-logo"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,6 +31,8 @@ export type PayPageConfig = {
   money?: string | number | null
   codename?: string
   sitename?: string
+  hasAlipayQr?: boolean
+  logoUrl?: string
 }
 
 const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "dot"]
@@ -80,6 +84,9 @@ export function PayPageView({ config = {} }: { config?: PayPageConfig }) {
   const [amountValue, setAmountValue] = React.useState(
     fixedAmount ? String(config.money) : ""
   )
+  const [paymentType, setPaymentType] = React.useState(
+    String(config.paytype ?? "")
+  )
 
   const formattedAmount = formatAmount(amountValue)
   const canSubmit =
@@ -88,9 +95,15 @@ export function PayPageView({ config = {} }: { config?: PayPageConfig }) {
   const changeAmount = (value: string) => {
     setAmountValue((current) => nextAmountValue(current, value))
   }
-  const submitPayment = () => {
+  const submitPayment = (type = paymentType, staticQr = false) => {
     const input = document.getElementById("txAmount") as HTMLInputElement | null
     if (input) input.value = amountValue
+    const paytype = document.getElementById("paytype") as HTMLInputElement | null
+    if (paytype) paytype.value = type
+    const staticQrInput = document.getElementById(
+      "static_qr"
+    ) as HTMLInputElement | null
+    if (staticQrInput) staticQrInput.value = staticQr ? "1" : "0"
     const legacyWindow = window as Window & { submitFun?: () => void }
     legacyWindow.submitFun?.()
   }
@@ -111,9 +124,7 @@ export function PayPageView({ config = {} }: { config?: PayPageConfig }) {
         <Card className="rounded-3xl shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between gap-4 border-b p-5 sm:p-7">
             <div className="flex min-w-0 items-center gap-3">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-                <ShieldCheck className="size-5" />
-              </span>
+              <SiteLogo logoUrl={config.logoUrl} className="size-11 rounded-2xl" />
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">收款至</p>
                 <CardTitle className="mt-1 break-all text-xl tracking-tight">
@@ -157,6 +168,13 @@ export function PayPageView({ config = {} }: { config?: PayPageConfig }) {
                 name="payer"
                 id="payer"
                 value={String(config.payer ?? "")}
+              />
+              <input type="hidden" name="static_qr" id="static_qr" value="0" />
+              <input
+                type="hidden"
+                name="has_alipay_qr"
+                id="has_alipay_qr"
+                value={config.hasAlipayQr ? "1" : "0"}
               />
               <input type="hidden" name="trade_no" id="trade_no" value="" />
               <input
@@ -243,7 +261,7 @@ export function PayPageView({ config = {} }: { config?: PayPageConfig }) {
               <Button
                 type="button"
                 id="payBtn"
-                onClick={submitPayment}
+                onClick={() => submitPayment()}
                 disabled={!canSubmit}
                 className={cn(
                   "mt-3 h-14 w-full rounded-2xl text-base",
@@ -256,9 +274,24 @@ export function PayPageView({ config = {} }: { config?: PayPageConfig }) {
               </Button>
             </CardContent>
           </Card>
+          {config.hasAlipayQr ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setPaymentType("alipay")
+                submitPayment("alipay", true)
+              }}
+              disabled={!canSubmit}
+              className="h-12 w-full rounded-2xl border-sky-200 text-sky-700 hover:bg-sky-50"
+            >
+              <ExternalLink data-icon="inline-start" />
+              支付宝转账
+            </Button>
+          ) : null}
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="size-4 text-primary" />由{" "}
-            {config.sitename || "Rainbow Pay"} 提供安全支付服务
+            {config.sitename || "EasyPay"} 提供安全支付服务
           </div>
         </div>
       </div>

@@ -501,6 +501,21 @@ function needsRehashPassword($hash) {
 function h($str) {
     return htmlspecialchars((string)$str, ENT_QUOTES, 'UTF-8');
 }
+
+/** 站点 Logo URL（优先 uploads，兼容旧路径 assets/img/logo.png） */
+function site_logo_url(){
+	$candidates = [
+		'assets/uploads/logo.png' => ROOT.'assets/uploads/logo.png',
+		'assets/img/logo.png' => ROOT.'assets/img/logo.png',
+	];
+	foreach($candidates as $rel => $full){
+		if(is_file($full)){
+			return '/'.$rel.'?v='.filemtime($full);
+		}
+	}
+	return '';
+}
+
 function getMillisecond()
 {
 	list($s1, $s2) = explode(' ', microtime());

@@ -32,6 +32,7 @@ if [ -d "/var/www/html-staging" ]; then
         --exclude='plugins/' \
         --exclude='install/install.lock' \
         --exclude='assets/uploads/' \
+        --exclude='assets/img/logo.png' \
         --exclude='cache/' \
         --exclude='ip2region.xdb' \
         /var/www/html-staging/ /var/www/html/

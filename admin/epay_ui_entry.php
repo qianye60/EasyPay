@@ -12,7 +12,7 @@ if(!function_exists('epay_admin_view')){
 		$epay_ui_view = (string)$view;
 		$epay_ui_config = is_array($config) ? $config : [];
 		$epay_ui_config['title'] = isset($epay_ui_config['title']) ? (string)$epay_ui_config['title'] : (string)$title;
-		$epay_ui_config['sitename'] = isset($epay_ui_config['sitename']) ? (string)$epay_ui_config['sitename'] : (string)($conf['sitename'] ?? 'Rainbow Pay');
+		$epay_ui_config['sitename'] = isset($epay_ui_config['sitename']) ? (string)$epay_ui_config['sitename'] : (string)($conf['sitename'] ?? 'EasyPay');
 		$epay_ui_config['csrf_token'] = $admin_csrf_token;
 		include __DIR__.'/head.php';
 		exit('</body></html>');

@@ -30,7 +30,7 @@ function sendJumpOut(jumpUrl?: string) {
 
 export function GoldPlanView({ config }: { config?: GoldPlanConfig }) {
   const error = config?.error?.trim()
-  const sitename = config?.sitename || "Rainbow Pay"
+  const sitename = config?.sitename || "EasyPay"
 
   React.useEffect(() => {
     if (typeof window === "undefined") return

@@ -320,7 +320,7 @@ export function AdminOrderView({ config = {} }: { config?: AdminOrderConfig }) {
 
   const paymentTypes = config.paymentTypes ?? []
   const csrfToken = stringValue(config.csrf_token)
-  const sitename = stringValue(config.sitename, "Rainbow Pay")
+  const sitename = stringValue(config.sitename, "EasyPay")
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
   const allSelected = rows.length > 0 && rows.every((row) => selected.has(stringValue(row.trade_no)))
   const someSelected = rows.some((row) => selected.has(stringValue(row.trade_no)))

@@ -156,6 +156,10 @@ case 'getcount':
 
 	$channels = [];
 	$types = \lib\Channel::getTypes($uid, $userrow['gid']);
+	$cryptoMap = [];
+	foreach(\lib\Channel::getCryptoWallets($uid, $userrow['gid']) as $wallet){
+		$cryptoMap[$wallet['name']] = $wallet;
+	}
 	foreach($types as $row){
 		$order_today = round($DB->getColumn("SELECT sum(money) FROM pre_order WHERE uid={$uid} AND status=1 AND date='$today' AND type={$row['id']}"),2);
 		$order_lastday = round($DB->getColumn("SELECT sum(money) FROM pre_order WHERE uid={$uid} AND status=1 AND date='$lastday' AND type={$row['id']}"),2);
@@ -163,7 +167,13 @@ case 'getcount':
 		$orderrow = $DB->getRow("SELECT COUNT(*) allnum,COUNT(IF(status>0, 1, NULL)) sucnum FROM pre_order WHERE uid={$uid} AND addtime>='$today' AND type={$row['id']}");
 		$success_rate = $orderrow && $orderrow['allnum'] > 0 ? round($orderrow['sucnum']/$orderrow['allnum']*100,2) : 100;
 
-		$channels[] = ['name'=>$row['name'], 'showname'=>$row['showname'], 'rate'=>round(100-$row['rate'], 2), 'order_today'=>$order_today, 'order_lastday'=>$order_lastday, 'success_rate'=>$success_rate];
+		$item = ['name'=>$row['name'], 'showname'=>$row['showname'], 'rate'=>round(100-$row['rate'], 2), 'order_today'=>$order_today, 'order_lastday'=>$order_lastday, 'success_rate'=>$success_rate];
+		if(isset($cryptoMap[$row['name']])){
+			$item['crypto'] = 1;
+			$item['address'] = $cryptoMap[$row['name']]['address'];
+			$item['ready'] = $cryptoMap[$row['name']]['ready'];
+		}
+		$channels[] = $item;
 	}
 
 	$result=['code'=>0, 'orders'=>$orders, 'orders_today'=>$orders_today, 'settle_money'=>$settle_money, 'order_today_all'=>$order_today_all, 'order_lastday_all'=>$order_lastday_all, 'transfer_today_all'=>$transfer_today_all, 'transfer_lastday_all'=>$transfer_lastday_all, 'channels'=>$channels];

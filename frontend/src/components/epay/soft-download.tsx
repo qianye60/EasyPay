@@ -54,7 +54,7 @@ export function SoftDownloadView({
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <header>
         <p className="text-xs text-muted-foreground">
-          {config.sitename ?? "Rainbow Pay"}
+          {config.sitename ?? "EasyPay"}
         </p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">软件下载</h1>
         <p className="mt-1 text-sm text-muted-foreground">

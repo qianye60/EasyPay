@@ -27,7 +27,7 @@ $channels = [
 		'on'=>'ali_on',
 		'name'=>'支付宝',
 		'icon'=>'/assets/icon/alipay.ico',
-		'tip'=>'上传清晰的支付宝收款码；请使用本站「软件下载」中的监控端。',
+		'tip'=>'上传清晰的支付宝收款码作备用；推荐上方填写 UID，付款时自动锁定金额。',
 	],
 ];
 $uploadedCount = 0;
@@ -36,6 +36,9 @@ foreach($channels as $channel){
 	if(!empty($row[$channel['qr']])) $uploadedCount++;
 	if(intval($row[$channel['on']] ?? 1) === 1) $activeCount++;
 }
+$cryptoWallets = \lib\Channel::getCryptoWallets($uid, $userrow['gid'] ?? 0);
+$aliUid = GuajiHelper::aliUid($uid);
+$aliUidRaw = trim((string)($row['ali_uid'] ?? ''));
 ?>
 <style>
 .gjb-page{max-width:1080px;margin:0 auto;padding:8px 4px 32px;color:#0f172a}
@@ -112,6 +115,20 @@ foreach($channels as $channel){
 .gjb-ch-actions .gjb-act.ok{color:#15803d!important;border-color:#bbf7d0!important;background:#ecfdf5!important}
 .gjb-upload-button{margin:0;cursor:pointer}
 .gjb-upload-button.disabled{opacity:.6;pointer-events:none}
+.gjb-crypto{padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px}
+.gjb-crypto-item{border:1px solid #d1fae5;border-radius:14px;padding:16px;background:linear-gradient(180deg,#ecfdf5 0%,#fff 70%)}
+.gjb-crypto-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.gjb-crypto-top strong{font-size:15px}
+.gjb-crypto-top span.meta{display:block;margin-top:2px;font-size:11px;color:#64748b}
+.gjb-crypto-addr{display:flex;align-items:stretch;border:1px solid #a7f3d0;border-radius:10px;overflow:hidden;background:#fff}
+.gjb-crypto-addr code{flex:1;min-width:0;padding:10px 12px;font-size:12px;word-break:break-all;color:#065f46;line-height:1.5}
+.gjb-crypto-addr button{flex:0 0 auto;border:0;border-left:1px solid #a7f3d0;background:#ecfdf5;color:#047857;padding:0 14px;font-size:12px;font-weight:600;cursor:pointer}
+.gjb-crypto-addr button:hover{background:#d1fae5}
+.gjb-crypto-tip{margin:10px 0 0;font-size:12px;color:#64748b;line-height:1.6}
+.gjb-crypto-empty{padding:14px 16px;border-radius:12px;background:#f8fafc;border:1px dashed #cbd5e1;font-size:13px;color:#64748b}
+.gjb-aliuid{padding:16px 20px 4px}
+.gjb-aliuid .gjb-field{margin-bottom:8px}
+.gjb-aliuid .help a{color:#0369a1;text-decoration:underline}
 @media(max-width:860px){
   .gjb-hero{flex-direction:column}
   .gjb-monitor,.gjb-main{grid-template-columns:1fr}
@@ -193,7 +210,20 @@ foreach($channels as $channel){
       <section class="gjb-card">
         <div class="gjb-card-hd">
           <h2>收款通道</h2>
-          <small>目前开放微信、支付宝</small>
+          <small>支付宝推荐填 UID 锁金额；微信仍用收款码</small>
+        </div>
+        <div class="gjb-aliuid">
+          <div class="gjb-field">
+            <label for="gjb-ali-uid">支付宝 UID（固定金额转账）</label>
+            <div class="gjb-row">
+              <input type="text" id="gjb-ali-uid" value="<?php echo h($aliUidRaw)?>" placeholder="2088 开头的一串数字" maxlength="32" autocomplete="off">
+              <div class="gjb-btns">
+                <button type="button" onclick="saveAliUid()">保存</button>
+              </div>
+            </div>
+            <span class="help">填写后客户扫码会自动带入应付金额。电脑打开 <a href="https://www.alipay.com/" target="_blank" rel="noopener">alipay.com</a> 登录 → 查看源代码搜索 <code>userId</code>。</span>
+            <?php if($aliUid !== ''){ ?><span class="help" style="color:#15803d">已启用固定金额转账。</span><?php }elseif($aliUidRaw !== ''){ ?><span class="help" style="color:#c2410c">当前 UID 格式无效，请重新填写。</span><?php } ?>
+          </div>
         </div>
         <div class="gjb-toolbar">
           <label for="gjb-test-money">测试金额</label>
@@ -239,14 +269,67 @@ foreach($channels as $channel){
 <?php } ?>
         </div>
       </section>
+
+      <section class="gjb-card">
+        <div class="gjb-card-hd">
+          <div>
+            <strong>加密货币收款</strong>
+            <span class="gjb-heart-ago">由平台配置，商户只读查看</span>
+          </div>
+        </div>
+        <div class="gjb-crypto">
+<?php if($cryptoWallets){ foreach($cryptoWallets as $i => $wallet){ $addrId = 'crypto-addr-'.$i; ?>
+          <div class="gjb-crypto-item">
+            <div class="gjb-crypto-top">
+              <div>
+                <strong><?php echo h($wallet['showname'] ?: $wallet['name'])?></strong>
+                <span class="meta">交易类型 <?php echo h($wallet['name'])?><?php if(!empty($wallet['channel'])){ ?> · 通道 <?php echo h($wallet['channel']); } ?></span>
+              </div>
+              <?php echo !empty($wallet['ready']) ? '<span class="gjb-badge on">已启用</span>' : '<span class="gjb-badge off">待配置地址</span>'; ?>
+            </div>
+            <?php if(!empty($wallet['ready'])){ ?>
+            <div class="gjb-crypto-addr">
+              <code id="<?php echo $addrId?>"><?php echo h($wallet['address'])?></code>
+              <button type="button" onclick="copyText('<?php echo $addrId?>')">复制</button>
+            </div>
+            <p class="gjb-crypto-tip">客户支付后资金进入上述地址。地址由管理员配置，如需更换请联系平台。</p>
+            <?php }else{ ?>
+            <div class="gjb-crypto-empty">通道已开通，但收款地址尚未配置，请联系管理员。</div>
+            <?php } ?>
+          </div>
+<?php } }else{ ?>
+          <div class="gjb-crypto-empty">当前套餐未开通加密货币收款通道。</div>
+<?php } ?>
+        </div>
+      </section>
     </div>
   </div>
 </div>
 <script>
 function copyText(id){
   var el = document.getElementById(id);
-  el.select();
-  document.execCommand('copy');
+  if(!el) return;
+  var text = (el.value !== undefined ? el.value : (el.textContent || '')).trim();
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(function(){
+      if(window.layer) layer.msg('已复制'); else alert('已复制');
+    }).catch(function(){
+      fallbackCopy(el, text);
+    });
+    return;
+  }
+  fallbackCopy(el, text);
+}
+function fallbackCopy(el, text){
+  if(el.select){ el.select(); document.execCommand('copy'); }
+  else {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
   if(window.layer) layer.msg('已复制'); else alert('已复制');
 }
 function postAct(data, cb){
@@ -269,6 +352,13 @@ function resetKey(){
   if(!confirm('重置后监控 APP 里的旧密钥会失效，确定？')) return;
   postAct({act:'resetkey'}, function(d){
     if(d.code===0) location.reload(); else alert(d.msg||'失败');
+  });
+}
+function saveAliUid(){
+  var aliUid = (document.getElementById('gjb-ali-uid').value || '').trim();
+  postAct({act:'saveAliUid', ali_uid:aliUid}, function(d){
+    if(d.code===0){ if(window.layer) layer.msg(d.msg||'已保存'); else alert(d.msg||'已保存'); location.reload(); }
+    else alert(d.msg||'保存失败');
   });
 }
 function testOrder(type){

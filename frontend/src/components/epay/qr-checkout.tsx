@@ -2,7 +2,6 @@ import {
   AlertTriangle,
   Check,
   ChevronDown,
-  CircleDollarSign,
   Clock3,
   Copy,
   ExternalLink,
@@ -12,6 +11,7 @@ import {
 import * as React from "react"
 
 import { QrDotMap } from "@/components/epay/qr-dot-map"
+import { SiteLogo } from "@/components/epay/site-logo"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -39,6 +39,8 @@ export type QrCheckoutConfig = {
   createdAt?: string
   expireAt?: number
   payType?: string
+  amountLocked?: number | boolean
+  logoUrl?: string
 }
 
 const payMeta: Record<
@@ -118,6 +120,7 @@ function payTypeOf(config: QrCheckoutConfig) {
 
 function openScheme(codeUrl: string, type: string) {
   if (type === "alipay") {
+    if (codeUrl.startsWith("alipays://")) return codeUrl
     return `alipays://platformapi/startapp?appId=20000067&url=${encodeURIComponent(codeUrl)}`
   }
   return codeUrl
@@ -133,8 +136,9 @@ export function QrCheckoutView({
   const amount = formatAmount(config.amount)
   const codeUrl = String(config.codeUrl ?? "")
   const imageUrl = String(config.imageUrl ?? "")
+  const amountLocked = Boolean(config.amountLocked)
   const expireAt = Number(config.expireAt ?? 0)
-  const siteName = config.sitename || "Rainbow Pay"
+  const siteName = config.sitename || "EasyPay"
   const [remain, setRemain] = React.useState(() =>
     expireAt ? Math.max(0, expireAt - Math.floor(Date.now() / 1000)) : 0
   )
@@ -201,9 +205,7 @@ export function QrCheckoutView({
       <div className="mx-auto w-full max-w-md">
         <div className="mb-4 flex items-center justify-between gap-3 px-1">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-              <CircleDollarSign className="size-5" aria-hidden="true" />
-            </div>
+            <SiteLogo logoUrl={config.logoUrl} className="size-9" />
             <div className="min-w-0 leading-tight">
               <p className="truncate font-semibold tracking-tight">{siteName}</p>
               <p className="truncate text-[11px] text-muted-foreground">
@@ -238,7 +240,11 @@ export function QrCheckoutView({
                 {meta.label}
               </span>
             </div>
-            <CardDescription>{meta.recommend}完成付款。</CardDescription>
+            <CardDescription>
+              {amountLocked
+                ? "扫码后金额已锁定，确认即可付款。"
+                : `${meta.recommend}完成付款。`}
+            </CardDescription>
           </CardHeader>
 
           <CardContent className="flex flex-col items-center gap-4 px-5 py-6">
@@ -252,12 +258,34 @@ export function QrCheckoutView({
               </p>
             </div>
 
-            <Alert className="w-full rounded-2xl border-amber-500/30 bg-amber-500/8">
-              <AlertTriangle className="text-amber-600" />
-              <AlertTitle>请按提示金额原样支付</AlertTitle>
+            <Alert
+              className={cn(
+                "w-full rounded-2xl",
+                amountLocked
+                  ? "border-emerald-500/30 bg-emerald-500/8"
+                  : "border-amber-500/30 bg-amber-500/8"
+              )}
+            >
+              {amountLocked ? (
+                <ShieldCheck className="text-emerald-600" />
+              ) : (
+                <AlertTriangle className="text-amber-600" />
+              )}
+              <AlertTitle>
+                {amountLocked ? "金额已自动填入" : "请按提示金额原样支付"}
+              </AlertTitle>
               <AlertDescription>
-                必须支付 <strong>¥{amount}</strong>
-                ，多付或少付都无法自动匹配到账。
+                {amountLocked ? (
+                  <>
+                    打开支付宝后请确认支付 <strong>¥{amount}</strong>
+                    ，无需手动改金额。
+                  </>
+                ) : (
+                  <>
+                    必须支付 <strong>¥{amount}</strong>
+                    ，否则无法自动到账。
+                  </>
+                )}
               </AlertDescription>
             </Alert>
 

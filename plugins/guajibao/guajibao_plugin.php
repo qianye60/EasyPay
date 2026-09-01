@@ -32,6 +32,15 @@ class guajibao_plugin
 		if(!GuajiHelper::channelOn($order['uid'], $order['typename'])){
 			return ['type'=>'error','msg'=>'商户未开启该支付通道'];
 		}
+
+		if($order['typename']=='alipay'){
+			$pay = GuajiHelper::alipayPayUrl($order['uid'], $order['realmoney'] ?? $order['money'], defined('TRADE_NO') ? TRADE_NO : ($order['trade_no'] ?? ''));
+			if(!$pay){
+				return ['type'=>'error','msg'=>'请配置支付宝 UID（推荐，固定金额）或上传支付宝收款码'];
+			}
+			return ['type'=>'qrcode','page'=>'alipay_qrcode','url'=>$pay['url'],'amount_locked'=>intval($pay['locked'])];
+		}
+
 		$rel = GuajiHelper::qrPath($order['uid'], $order['typename']);
 		if(!$rel){
 			return ['type'=>'error','msg'=>'收款商户尚未上传该支付方式的收款码'];
@@ -41,9 +50,7 @@ class guajibao_plugin
 			return ['type'=>'error','msg'=>'收款码无法识别，请商户重新上传清晰的收款二维码'];
 		}
 
-		if($order['typename']=='alipay'){
-			$page = 'alipay_qrcode';
-		}elseif($order['typename']=='qqpay'){
+		if($order['typename']=='qqpay'){
 			$page = 'qqpay_qrcode';
 		}else{
 			$page = 'wxpay_qrcode';

@@ -7,6 +7,7 @@ import {
   Loader2,
   QrCode,
   Save,
+  Upload,
 } from "lucide-react"
 
 import { QrDotMap } from "@/components/epay/qr-dot-map"
@@ -27,6 +28,7 @@ export type OnecodeConfig = {
   sitename?: string
   codeUrl?: string
   codeName?: string
+  alipayQrUrl?: string
   csrfToken?: string
   styleUrl?: string
 }
@@ -94,6 +96,11 @@ export function MerchantOnecodeView({ config }: { config?: OnecodeConfig }) {
     text: string
   } | null>(null)
   const [saving, setSaving] = React.useState(false)
+  const [alipayQrUrl, setAlipayQrUrl] = React.useState(
+    config?.alipayQrUrl ?? ""
+  )
+  const [uploadingQr, setUploadingQr] = React.useState(false)
+  const alipayFileInput = React.useRef<HTMLInputElement>(null)
   const [copied, setCopied] = React.useState(false)
   const styleUrl = config?.styleUrl ?? "./assets/js/config.json"
   const style = styles[styleName] ?? styles.default ?? fallbackStyles.default
@@ -172,13 +179,49 @@ export function MerchantOnecodeView({ config }: { config?: OnecodeConfig }) {
     }
   }
 
+  const uploadAlipayQr = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ""
+    if (!file) return
+    setUploadingQr(true)
+    setNotice(null)
+    try {
+      const body = new FormData()
+      body.append("field", "ali_qr")
+      body.append("csrf_token", config?.csrfToken ?? "")
+      body.append("file", file)
+      const response = await fetch("ajax2.php?act=guajiUpload", {
+        method: "POST",
+        credentials: "same-origin",
+        body,
+      })
+      const data = (await response.json()) as {
+        code?: number
+        msg?: string
+        url?: string
+      }
+      if (data.code !== 0 || !data.url) {
+        throw new Error(data.msg || "上传失败")
+      }
+      setAlipayQrUrl(data.url)
+      setNotice({ kind: "success", text: data.msg || "支付宝收款码已上传" })
+    } catch (error) {
+      setNotice({
+        kind: "error",
+        text: error instanceof Error ? error.message : "上传失败，请稍后重试",
+      })
+    } finally {
+      setUploadingQr(false)
+    }
+  }
+
   const styleKeys = Object.keys(styles)
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
       <header>
         <p className="text-xs text-muted-foreground">
-          {config?.sitename ?? "Rainbow Pay"}
+          {config?.sitename ?? "EasyPay"}
         </p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight">聚合收款</h1>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -271,6 +314,54 @@ export function MerchantOnecodeView({ config }: { config?: OnecodeConfig }) {
                 <AlertDescription>{notice.text}</AlertDescription>
               </Alert>
             ) : null}
+
+            <div className="space-y-3 rounded-2xl border border-sky-200/70 bg-sky-50/60 p-4">
+              <div>
+                <p className="text-sm font-medium text-sky-950">支付宝转账收款码</p>
+                <p className="mt-1 text-xs leading-5 text-sky-900/70">
+                  上传支付宝个人收款码，客户输入金额后可直接扫码转账。
+                </p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-sky-200 bg-white">
+                  {alipayQrUrl ? (
+                    <img
+                      src={alipayQrUrl}
+                      alt="支付宝收款码"
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <QrCode className="size-7 text-sky-300" />
+                  )}
+                </div>
+                <div className="min-w-0 space-y-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 rounded-xl border-sky-300 bg-white"
+                    onClick={() => alipayFileInput.current?.click()}
+                    disabled={uploadingQr}
+                  >
+                    {uploadingQr ? (
+                      <Loader2 className="animate-spin" data-icon="inline-start" />
+                    ) : (
+                      <Upload data-icon="inline-start" />
+                    )}
+                    {alipayQrUrl ? "重新上传" : "上传收款码"}
+                  </Button>
+                  <input
+                    ref={alipayFileInput}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(event) => void uploadAlipayQr(event)}
+                  />
+                  <p className="text-xs leading-5 text-sky-900/60">
+                    仅支持清晰完整的支付宝收款码图片，最大 2MB。需要自动核验到账时，请同时开启到账监听。
+                  </p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

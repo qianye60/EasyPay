@@ -457,4 +457,37 @@ class Channel {
 		}
 		return false;
 	}
+
+	/** 商户可见的加密货币收款信息（只读，来自用户组绑定的 bepusdt 通道） */
+	static public function getCryptoWallets($uid, $gid=0){
+		global $DB;
+		$types = self::getTypes($uid, $gid);
+		if(!$types) return [];
+		$groupinfo = $DB->findColumn('group', 'info', ['gid'=>intval($gid)]);
+		if(!$groupinfo) $groupinfo = $DB->findColumn('group', 'info', ['gid'=>0]);
+		$info = $groupinfo ? (json_decode($groupinfo, true) ?: []) : [];
+		$out = [];
+		foreach($types as $typeid => $type){
+			$channelId = isset($info[$typeid]['channel']) ? intval($info[$typeid]['channel']) : 0;
+			$channel = null;
+			if($channelId > 0){
+				$channel = self::get($channelId);
+			}else{
+				$row = $DB->getRow("SELECT id FROM pre_channel WHERE type=:t AND plugin='bepusdt' AND status=1 ORDER BY id ASC LIMIT 1", [':t'=>intval($typeid)]);
+				if($row) $channel = self::get(intval($row['id']));
+			}
+			if(!$channel || ($channel['plugin'] ?? '') !== 'bepusdt') continue;
+			$address = trim((string)($channel['address'] ?? ''));
+			$ready = $address !== '' && substr($address, 0, 1) !== '[';
+			$out[] = [
+				'typeid' => intval($typeid),
+				'name' => (string)($type['name'] ?? ''),
+				'showname' => (string)($type['showname'] ?? ''),
+				'channel' => (string)($channel['name'] ?? ''),
+				'address' => $ready ? $address : '',
+				'ready' => $ready ? 1 : 0,
+			];
+		}
+		return $out;
+	}
 }
